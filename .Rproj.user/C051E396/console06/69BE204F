@@ -1,0 +1,35 @@
+[0m[0K[?25l
+[0;32mPilou@DESKTOP-SP4M948 [0;35m [0m[0K[1A[?25h]0;:/a/Documents/work isfa/3A/tarif/TarifProj[?25l
+[0;32mPilou@DESKTOP-SP4M948 [0;35m [0;33m/a/Documents/work isfa/3A/tarif/TarifProj[0m[0K
+$[0K[3G[?25h[?25l[1A[0;32mPilou@DESKTOP-SP4M948 [0;35m [0;33m/a/Documents/work isfa/3A/tarif/TarifProj[0K
+[0m$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git i[0K[?25hn[0Ki[0Kt[0K[?25l
+[0K[?25hInitialized empty Git repository in A:/Documents/work isfa/3A/tarif/TarifProj/.git/[0K[?25l
+[0K[?25h[?25l
+[0;32mPilou@DESKTOP-SP4M948 [0;35m [0;33m/a/Documents/work isfa/3A/tarif/TarifProj[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[3G[?25h[4G[?25l$ gi[0K[?25ht[0K[7G[?25l$ git a[0K[?25h[?25ld[0K[8G[?25h[9G[?25l$ git add[0K[?25h[11G[?25l
+.Rproj.user^M      ProjetTarif.Rmd^M  README.md^M        TarifProj.Rproj[0K
+[0K
+[0;32mPilou@DESKTOP-SP4M948 [0;35m [0;33m/a/Documents/work isfa/3A/tarif/TarifProj[0;36m (master)[0m[0K
+$ git add[0K[11G[?25h[?25l$ git add -[0K[11G[?25h[12G[?25l$ git add -a[0K[?25h[?25l
+[0K[?25herror: unknown switch `a'[0K[?25l
+usage: git add [<options>] [--] <pathspec>...[0K
+[0K
+    -n, --dry-run         dry run[0K
+    -v, --verbose         be verbose[0K
+[0K
+    -i, --interactive     interactive picking[0K
+    -p, --patch           select hunks interactively[0K
+    -e, --edit            edit current diff and apply[0K
+    -f, --force           allow adding otherwise ignored files[0K
+    -u, --update          update tracked files[0K
+    -N, --intent-to-add   record only the fact that the path will be added later[0K
+    -A, --all             add changes from all tracked and untracked files[0K
+    --ignore-removal      ignore paths removed in the working tree (same as --no-all)[0K
+    --refresh             don't add, only refresh the index[0K
+    --ignore-errors       just skip files which cannot be added because of errors[0K
+    --ignore-missing      check if - even missing - files are ignored in dry run[0K
+    --chmod <(+/-)x>      override the executable bit of the listed files[0K
+[0K
+[0K[?25h[?25l
+[0;32mPilou@DESKTOP-SP4M948 [0;35m [0;33m/a/Documents/work isfa/3A/tarif/TarifProj[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ git add -a[0K[?25h[?25l$ git add -[0K[?25h1[0K[?25l$ git add -[0K[?25hA[0K
