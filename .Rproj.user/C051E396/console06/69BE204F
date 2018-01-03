@@ -32,4 +32,36 @@ usage: git add [<options>] [--] <pathspec>...[0K
 [0K
 [0K[?25h[?25l
 [0;32mPilou@DESKTOP-SP4M948 [0;35m [0;33m/a/Documents/work isfa/3A/tarif/TarifProj[0;36m (master)[0m[0K
-$[0K[3G[?25h[?25l$ git add -a[0K[?25h[?25l$ git add -[0K[?25h1[0K[?25l$ git add -[0K[?25hA[0K
+$[0K[3G[?25h[?25l$ git add -a[0K[?25h[?25l$ git add -[0K[?25h1[0K[?25l$ git add -[0K[?25hA[0Kwarning: LF will be replaced by CRLF in README.md.[0K[?25l
+The file will have its original line endings in your working directory.[0K
+[0K[?25h[?25l
+[0;32mPilou@DESKTOP-SP4M948 [0;35m [0;33m/a/Documents/work isfa/3A/tarif/TarifProj[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0K[?25lt[0K[5G[?25h[6G[7G[?25l$ git c[0K[?25ho[0K[?25lm[0K[9G[?25h[10G[?25l$ git comm[0K[?25hi[0Kt[0K[14G[?25l$ git commit -[0K[?25hm[0K[17G[?25l$ git commit -m "[0K[?25hf[0K[?25li[0K[19G[?25h[20G[?25l$ git commit -m "fir[0K[?25h[?25ls[0K[21G[?25h[22G[?25l$ git commit -m "first[0K[?25h[24G[?25l$ git commit -m "first c[0K[?25ho[0Km[0Km[0K[?25li[0K[28G[?25h[29G[?25l$ git commit -m "first commit[0K[29G[?25h[30G[?25l$ git commit -m "first commit"[0K[?25h[?25l
+[0K[?25h[master (root-commit) 0041496] first commit[0K[?25l
+ 7 files changed, 411 insertions(+)[0K
+ create mode 100644 .Rproj.user/C051E396/console06/69BE204F[0K
+ create mode 100644 .Rproj.user/C051E396/console06/INDEX001[0K
+ create mode 100644 .Rproj.user/C051E396/sources/s-E934C863/lock_file[0K
+ create mode 100644 .Rproj.user/shared/notebooks/patch-chunk-names[0K
+ create mode 100644 ProjetTarif.Rmd[0K
+ create mode 100644 README.md[0K
+ create mode 100644 TarifProj.Rproj[0K
+[0K[?25h[?25l
+[0;32mPilou@DESKTOP-SP4M948 [0;35m [0;33m/a/Documents/work isfa/3A/tarif/TarifProj[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git r[0K[?25he[0Km[0Ko[0Kt[0Ke[0K[14G[?25l$ git remote a[0K[?25hd[0Kd[0K[18G[?25l$ git remote add o[0K[?25hr[0K[?25li[0K[20G[?25h[21G[?25l$ git remote add orig[0K[?25h[?25li[0K[22G[?25h[23G[?25l$ git remote add origin[0K[?25h[?25l$ git remote add origi[0K[24G[?25h[23G[?25l$ git remote add orig[0K[?25h[?25l$ git remote add ori[0K[?25hg[0Ki[0K[?25ln[0K[23G[?25h[24G[25G[?25l$ git remote add origin m[0K[?25ha[0Ks[0Kt[0Ke[0Kr[0K[?25l$ git remote add origin maste[0K[?25h[?25l$ git remote add origin mast[0K[?25h[?25l$ git remote add origin mas[0K[29G[?25h[28G[?25l$ git remote add origin ma[0K[?25h[?25l$ git remote add origin m[0K[27G[?25h[26G[?25l$ git remote add origin[0K[26G[?25h[25G[?25l$ git remote add origin h[0K[?25ht[0K[?25lt[0K[27G[?25h[28G[?25l$ git remote add origin http[0K[?25h:[0K[?25l$ git remote add origin http[0K[?25hs[0K:[0K/[0K/[0Kg[0Ki[0Kt[0Kh[0Ku[0Kb[0K.[0Kc[0Ko[0K[?25lm[0K[42G[?25h[43G[?25l$ git remote add origin https://github.com/[0K[?25hl[0Kr[0Kn[0Kv[0K/[0KT[0Ka[0Kr[0K[?25li[0K[52G[?25h[53G[?25l$ git remote add origin https://github.com/lrnv/Tarif[0K[?25hP[0Kr[0Ko[0Kj[0K.[0Kg[0Ki[0Kt[0K[?25l
+[0K[?25h[?25l
+[0;32mPilou@DESKTOP-SP4M948 [0;35m [0;33m/a/Documents/work isfa/3A/tarif/TarifProj[0;36m (master)[0m[0K
+$[0K[3G[?25h[?25l$ g[0K[?25hu[0Kt[0K[7G[6G[?25l$ gu[0K[6G[?25h[5G[?25l$ g[0K[?25hi[0Kt[0K[7G[?25l$ git p[0K[7G[?25h[8G[?25l$ git pu[0K[?25hs[0K[?25lh[0K[10G[?25h[11G[12G[?25l$ git push -[0K[?25hu[0K[15G[?25l$ git push -u r[0K[15G[?25h[16G[?25l$ git push -u ri[0K[?25hg[0Ki[0Kn[0K[21G[20G[?25l$ git push -u rigi[0K[20G[?25h[19G[?25l$ git push -u rig[0K[?25h[?25l$ git push -u ri[0K[?25h[?25l$ git push -u r[0K[17G[?25h[16G[?25l$ git push -u[0K[15G[?25h[?25l$ git push -u o[0K[?25hr[0Ki[0Kg[0Ki[0K[?25ln[0K[20G[?25h[21G[22G[?25l$ git push -u origin m[0K[?25h[?25la[0K[23G[?25h[24G[?25l$ git push -u origin mas[0K[?25ht[0Ke[0Kr[0K[?25l
+[0K[?25hCounting objects: 15, done.[0K[?25l
+Delta compression using up to 4 threads.[0K
+Compressing objects: 100% (9/9), done.[0K
+Writing objects: 100% (15/15), 7.64 KiB | 1.91 MiB/s, done.[0K
+Total 15 (delta 0), reused 0 (delta 0)[0K
+[0K[?25hTo https://github.com/lrnv/TarifProj.git[0K[?25l
+ * [new branch]      master -> master[0K
+[0K[?25hBranch master set up to track remote branch master from origin.[0K[?25l
+[0K[?25h[?25l
+[0;32mPilou@DESKTOP-SP4M948 [0;35m [0;33m/a/Documents/work isfa/3A/tarif/TarifProj[0;36m (master)[0m[0K
+$[0K[3G[?25h[0m[0K]0;:/a/Documents/work isfa/3A/tarif/TarifProj[?25l
+[0;32mPilou@DESKTOP-SP4M948 [0;35m [0;33m/a/Documents/work isfa/3A/tarif/TarifProj[0;36m (master)[0m[0K
+[?25l$ g[0K[?25hi[0K[?25lt[0K[5G[?25h[6G[7G[?25l$ git s[0K[?25ht[0K[?25la[0K[9G[?25h[10G[?25l$ git stag[0K[10G[?25h[11G[?25l$ git stage[0K[11G[?25h[12G[13G[?25l$ git stage -[0K[13G[?25h[14G[?25l$ git stage -A[0K[?25h
