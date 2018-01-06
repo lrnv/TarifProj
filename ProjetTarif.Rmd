@@ -347,6 +347,10 @@ mod.freq$PoissonLog3<- data.freq %>%
 # Une fois qu'on a fitter un paquet de modèles, on va récuppérer des statistiques sur eux : 
 
 # dMod.freq <- data.frame(mod.freq)
+dfMod.freq <- data.frame(Nom = names(mod.freq)) %>% 
+  mutate(
+    Model = mod.freq[[]]
+  )
 
 
 
