@@ -342,6 +342,7 @@ mod.freq$PoissonLog3<- data.freq %>%
 
 
 
+<<<<<<< HEAD
 # Comparons les résultats : 
 dfMod.freq <- 
   tibble(Nom = names(mod.freq)) %>%
@@ -355,6 +356,19 @@ dfMod.freq <-
 dfMod.freq
 
 # je vient de faire un truc de ouf : j'ai mit des GLM dans un data.frame, et avec la meme methode ( si on oublisles unnest) je met des df dans des df :)
+=======
+
+
+# Une fois qu'on a fitter un paquet de modèles, on va récuppérer des statistiques sur eux : 
+
+# dMod.freq <- data.frame(mod.freq)
+dfMod.freq <- data.frame(Nom = names(mod.freq)) %>% 
+  mutate(
+    Model = mod.freq[[]]
+  )
+
+
+>>>>>>> 3fcc279126514c7036871bce8e7dba85d791cdee
 
 
 
