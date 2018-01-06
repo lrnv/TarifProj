@@ -342,13 +342,19 @@ mod.freq$PoissonLog3<- data.freq %>%
 
 
 
+# Comparons les résultats : 
+dfMod.freq <- 
+  tibble(Nom = names(mod.freq)) %>%
+  mutate(
+    Mod = mod.freq,
+    family = map(Mod,"family"),
+    glance = Mod %>% map(glance)
+  ) %>%
+  unnest(glance) %>%
+  unnest(family)
+dfMod.freq
 
-
-# Une fois qu'on a fitter un paquet de modèles, on va récuppérer des statistiques sur eux : 
-
-# dMod.freq <- data.frame(mod.freq)
-
-
+# je vient de faire un truc de ouf : j'ai mit des GLM dans un data.frame, et avec la meme methode ( si on oublisles unnest) je met des df dans des df :)
 
 
 
