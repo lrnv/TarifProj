@@ -12,7 +12,7 @@ output:
     knitr::opts_chunk$set(echo = FALSE,warning = FALSE)
 
 ### Instalation des packages n?c?ssaires : si vous avez besoin de CASdataset d?commentez la ligne : 
-    # install.packages("CASdatasets", repos = "http://dutangc.free.fr/pub/RRepos/", type="source") # ligne sp?ciale pour CASdatasets qui ne vient pas de la meme source (pas de CRAN)
+     #install.packages("CASdatasets", repos = "http://dutangc.free.fr/pub/RRepos/", type="source") # ligne sp?ciale pour CASdatasets qui ne vient pas de la meme source (pas de CRAN)
     .list.of.packages <- c("CASdatasets","dplyr", "xts", "sp", "magrittr","ggplot2","gridExtra","gtable","grid")
     .new.packages <- .list.of.packages[!(.list.of.packages %in% installed.packages()[,"Package"])]
     if(length(.new.packages)) install.packages(.new.packages)
@@ -283,6 +283,64 @@ grid.arrange(VehBrandBefore, VehBrandAfter, nrow=1, ncol=2)
 
 
 # Partie Couts moyens 
+ 
+ 
+```{r "Base sévérité : typage des champs et regrouppement de modalit?es",include=FALSE}
+
+#_________La première étape est de jointer les bases de données sur la IDPol
+
+# Verifions tout d'abord que les IDpol dispo dans la base de contrat (celle donnant les montant le sinistres, data.sev) sont bien unique dans la première base : 
+
+# Il y a surrement  une correpondance 1/inf entre les identifiant police des deux bases 'IDpol'. EN d'autres termes, la base sinistre contient une ligne par sinistre et les montants pr?sent dedans sont donc des montant individuel de sinistre et non pas agr?g?. Arguments sur le choix du type de jonction : 
+      # dim(left_join(data.freq,data.sev))[1] == dim(data.freq)[1]  # doit retourner faux.
+      # prod(unique(data.freq$IDpol) == data.freq$IDpol) == 1 # doit retourner vrai
+      # prod(unique(data.sev$IDpol) == data.sev$IDpol) == 1 # doit retourner faux
+      # 
+      # sum(data.freq$ClaimNb) == nrow(data.sev) # ?a m'aurais arranger que ?a coresponde !!! Malheureusement on est pas dans une relation 1/Inf parfaite...
+      # 
+      # # essayons autrement : 
+      # data.freq %>% group_by(ClaimNb) %>% summarise(n=n())
+      # data.sev %>% group_by(IDpol) %>% summarize(count = n()) %>% group_by(count) %>% summarise(n=n())
+      # # Con de sa race les deux bases ne corespondent pas. 
+      # # chequons les lignes qui ne sont pas complete et qui ont un claimNb diff?rent de 0 
+      # test.join <- left_join(data.freq,data.sev) %>% filter(!complete.cases(.),ClaimNb != 0)
+      # #Ok on a donc a peu près 9000 ligne e sinistre sans valeur ou de sinistres sans donn?es. 
+      # test.join %>% filter(is.na(ClaimAmount))
+      # # Ha ce ne sont que des sinistres sans valeurs. 
+      # 
+      # # Ok c'est pas si grave, on les excluera juste de l'analyse.
+      # #ernier petit test : 
+      # nrow(left_join(data.freq,data.sev)) == nrow(full_join(data.freq,data.sev))
+      # # Bon finalement le left_join n'est pas indiqu?. On va plutot prendre un full_join.
+
+# c'est partit : 
+data <- full_join(data.freq,data.sev)
+
+#On ne retient que les polices sinistrées
+sev <- subset(data, ClaimNb > 0)
+
+
+#On exclue les ligne sans montant de sinistre: il y en a 9000 environ
+sev <- subset(sev, ClaimAmount > 0)
+
+
+#________Voici venu le temps de s'intéresser à la mise en forme et à l'analyse des données de cette base
+
+# Re-factorisons certaines variables :  
+str(sev)
+cols <- c("VehGas")
+sev[cols] <- lapply(sev[cols], function(x) factor(x))
+str(sev)
+
+par(mfrow=c(2,2))
+
+################################################
+######################## Traitement de l'age du v?hicule
+################################################
+# Graphique de l'?tat du monde : 
+sev %>% 
+  qplot(data=.,VehAge) -> 
+  VehAgeBefore 
 
 
 
@@ -290,6 +348,8 @@ grid.arrange(VehBrandBefore, VehBrandAfter, nrow=1, ncol=2)
 
 
 
+
+```
 
 
 
@@ -336,7 +396,6 @@ On va plutot fitter s?par?ment les deux .
 # c'est partit : 
 data <- full_join(data.freq,data.sev)
 
-```
 
 
 
