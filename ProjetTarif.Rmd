@@ -340,8 +340,6 @@ mod.freq$PoissonLog3<- data.freq %>%
 
 
 
-
-
 # Comparons les résultats : 
 dfMod.freq <- 
   tibble(Nom = names(mod.freq)) %>%
@@ -355,6 +353,7 @@ dfMod.freq <-
 dfMod.freq
 
 # je vient de faire un truc de ouf : j'ai mit des GLM dans un data.frame, et avec la meme methode ( si on oublisles unnest) je met des df dans des df :)
+
 
 
 
