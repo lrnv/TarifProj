@@ -13,7 +13,7 @@ output:
 
 ### Instalation des packages n?c?ssaires : si vous avez besoin de CASdataset d?commentez la ligne : 
      #install.packages("CASdatasets", repos = "http://dutangc.free.fr/pub/RRepos/", type="source") # ligne sp?ciale pour CASdatasets qui ne vient pas de la meme source (pas de CRAN)
-    .list.of.packages <- c("CASdatasets","dplyr", "xts", "sp", "magrittr","ggplot2","gridExtra","gtable","grid","tidyr", "purrr","broom")
+    .list.of.packages <- c("CASdatasets","dplyr", "xts", "sp", "magrittr","ggplot2","gridExtra","gtable","grid","tidyr", "purrr","broom","pscl")
     .new.packages <- .list.of.packages[!(.list.of.packages %in% installed.packages()[,"Package"])]
     if(length(.new.packages)) install.packages(.new.packages)
     lapply(.list.of.packages,function(x){library(x,character.only=TRUE)}) 
@@ -132,9 +132,17 @@ On a donc à notre disposition les variables suivantes :
 ######################## Mise en place de l'environnement
 ################################################
 
-# COmmençons par réduire la taille de la data pour pouvoir travailler tranquilement si besoin. (pas obligatoire)
-df <- sample_frac(data.freq,0.05)
-# df <- data.freq
+
+
+# ACHTUNG : Je n'ai pas commencer par poser un dataset d'échantillogane et un dataset de validation. Il faudrais le faire. 
+# Ainsi tout ce que j'ai fait ici est en fait a faire uniquement sur le dataset d'apprentissage. 
+# De plus, j'ai séparer dans deux chunks les regrouppements de modalitées et les fitting de modèles. Pas sur qu'il fallais faire comme ça. J'ai peut d'avoir trop regroupper car mes modèles fittent très bien. Ou alors c'est juste que la BDD est enorme. 
+
+
+
+# Commençons par réduire la taille de la data pour pouvoir travailler tranquilement si besoin. (pas obligatoire)
+# df <- sample_frac(data.freq,0.05)
+df <- data.freq
 # Re-factorisons certaines variables :  
 str(df)
 cols <- c("VehGas")
@@ -265,6 +273,42 @@ En effet, au vue des graphiques suivant donnant la densit?e de chaque Nombre de 
 ```
 
 
+Maintenant que nos discrétisations sont faites, appliquons un relevel sur data.freq pour créer un profil de référence : On prend pour chaque variable la modalitée la plus représentée :
+```{r profilDeReference}
+# Le but va être de relevel automatique tout les factor du dataset sur la valeur la plus représentée : 
+
+# petite fonction : 
+Autorelevel <- function(dataset){
+  
+    # On commence par construire le profil de référence.
+    .ProfilDeRef <- 
+      dataset %>%
+      Filter(is.factor,.) %>%
+      map(table) %>%
+      map(sort,decreasing = TRUE) %>%
+      map(names) %>%
+      map_chr(1)
+    
+    # Puis pour chaque facteur, on relever sur le profil de référence.
+    for (i in names(Filter(is.factor,dataset))){
+      dataset[,i] <- relevel(dataset[,i],.ProfilDeRef[i])
+    }
+    return(dataset)
+}
+
+# on applique a notre dataset : 
+data.freq %<>% Autorelevel
+
+
+```
+
+
+
+
+
+
+
+
 Une fois ces discrétisations primaire effectuées, nous allons essayer de fitter un modèle GLM log-poisson sur la fréquence. 
 
 Des ramifications ent erme de Zero-inflated, de Over-dispersed quasi-poisson, de Negative binomial ou de tout cela en meme temps seront ensuite possible. 
@@ -300,26 +344,38 @@ mod.freq <- list()
 
 
 
-# Passons a la BDD avec les regrouppements de modalité appliqué : 
+#names(data.freq)
+# IDpol + ClaimNb + Exposure + Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region
+
+
+################################################
+######################## Modèles Poissoniens
+################################################
+# Passons a la BDD avec les regrouppements de modalité appliqué : Par déffaut on vire IDPOL
+
 mod.freq$poissonLog<- data.freq %>% 
-  select(-c(IDpol,Region)) %>%
-  glm (data = ., ClaimNb ~ . , offset=log(Exposure), family=poisson(link=log)) %T>%
+  glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
+
+mod.freq$poissonLog2<- data.freq %>% 
+  glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density , offset=log(Exposure), family=poisson(link=log)) %T>%
+  {print(summary(.))}
+
 
 #AreaF, AreaB et Density ne fittent pas bien. 
 # retirons density : 
-mod.freq$poissonLog2<- data.freq %>% 
-  select(-c(IDpol,Region,Density)) %>%
-  glm (data = ., ClaimNb ~ . , offset=log(Exposure), family=poisson(link=log)) %T>%
+mod.freq$poissonLog3<- data.freq %>% 
+  glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas, offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 #Ok c'est un tout petit peu mieux. Density explique probablement AreaF, ou en tout cas elles apporte la meme information.
 
 # mais tout le reste est plutot bon. 
 
-# Essayons un ODP : 
+################################################
+######################## Modèles poissoniens surdispersés
+################################################
 mod.freq$odPoissonLog<- data.freq %>% 
-  select(-c(IDpol,Region,Density)) %>%
-  glm (data = ., ClaimNb ~ . , offset=log(Exposure), family=quasipoisson(link=log)) %T>%
+  glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas , offset=log(Exposure), family=quasipoisson(link=log)) %T>%
   {print(summary(.))}
 
 # le paramètre de dispertion est très proche de 1 !!! 
@@ -329,14 +385,50 @@ mod.freq$odPoissonLog<- data.freq %>%
 # il faudrais peut-être regroupper.
 #Bon OK meme en regrouppant ça fitte pas. Donc on les dégage.
 mod.freq$odPoissonLog2<- data.freq %>% 
-  select(-c(IDpol,Region,Density,VehBrand)) %>%
-  glm (data = ., ClaimNb ~ . , offset=log(Exposure), family=quasipoisson(link=log)) %T>%
+  glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehGas , offset=log(Exposure), family=quasipoisson(link=log)) %T>%
   {print(summary(.))}
 
-mod.freq$PoissonLog3<- data.freq %>% 
-  select(-c(IDpol,Region,Density,VehBrand)) %>%
-  glm (data = ., ClaimNb ~ . , offset=log(Exposure), family=poisson(link=log)) %T>%
+mod.freq$PoissonLog4<- data.freq %>% 
+  glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehGas , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
+
+
+################################################
+######################## Modèles ZIP
+################################################
+
+# mod.freq$ZeroInflPoissonLog<- data.freq %>% 
+#   select(-c(IDpol)) %>%
+#   zeroinfl(data = ., formula = ClaimNb ~ . + offset=log(Exposure), dist="poisson") %T>%
+#   {print(summary(.))}
+# 
+
+
+#### Echec : depuis le début je traite l'exposure en offset, mais je la met dans les GLM !!! Ou peut-être pas ? 
+#Testons cela : 
+
+data = data.frame(Y = c(1,2,3,4),
+               X1 = c(3,4,5,6),
+               X2 = c(FALSE,FALSE,TRUE,TRUE),
+               Expo = c(0.1,0.2,0.3,0.5))
+
+glm(data=data,formula=Y ~ .,offset=log(Expo),family=poisson(link=log))
+
+
+
+
+
+
+
+# Tout mes modèles ont pour l'instant un AIC supperieur au poisson stanard. 
+
+# enfait on pourrais meme en rajouter pleins d'autres. A la fin on fera un classement selon un critère objectif pour retenir le meilleur. 
+# on pourra essayer selon un AIC, un BIC ou autre :)
+
+# Ok je vais faire ça. 
+# Je pense que j'ai trop regroupper a priorit. Je vais essayer en supprimant un regroupement ou deux, et juste en mettant en facteur certaines variables. ou alors en faisant des regroupement moins violents, par exemple un pas e discretisation de 5 au lieu e 10 pourles ages ou qqch comme ça. 
+
+
 
 
 
@@ -346,13 +438,17 @@ dfMod.freq <-
   mutate(
     Mod = mod.freq,
     family = map(Mod,"family"),
-    glance = Mod %>% map(glance)
-  ) %>%
-  unnest(glance) %>%
-  unnest(family)
-dfMod.freq
+    glance = Mod %>% map(glance),
+    tidy = Mod %>% map(tidy)
+  )
 
-# je vient de faire un truc de ouf : j'ai mit des GLM dans un data.frame, et avec la meme methode ( si on oublisles unnest) je met des df dans des df :)
+# On peut par exemple prendre le modèle moyen, dans chaque famille.
+dfMod.freq %>% unnest(glance)
+dfMod.freq %>% unnest(tidy)
+
+
+
+# je vient de faire un truc de ouf : j'ai mit des GLM dans un data.frame, et avec la meme methode ( si on oublis les unnest) je met des df dans des df :)
 
 
 
