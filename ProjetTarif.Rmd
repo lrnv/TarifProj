@@ -162,20 +162,13 @@ par(mfrow=c(2,2))
 # Fonction qui fabrique les plots : prérequis : 
 makeplot <- function(data,var,title="Before",continuous=TRUE){
   
-  if(continuous){
-  data %>% 
-    ggplot(aes(x = data[,var],weight = Exposure,fill=as.factor(ClaimNb)), environment = environment()) +
-      geom_histogram() +
-      ggtitle(title) %>%
-    return
-  } else{
-  data %>% 
-    ggplot(aes(x = data[,var],weight = Exposure,fill=as.factor(ClaimNb)), environment = environment()) +
-      geom_bar() +
-      ggtitle(title) %>%
-    return
-  }
+  p <- data %>% ggplot(aes(x = data[,var],weight = Exposure,fill=as.factor(ClaimNb)), environment = environment())
   
+  if(continuous){p = p + geom_histogram()}
+  else          {p = p + geom_bar()}
+  
+  p = p + ggtitle(title) + labs(fill="Nombre de Sinitres",x=var,y="Exposition Totale")  
+  return(p)
 }
 
 
@@ -280,10 +273,10 @@ En effet, au vue des graphiques suivant donnant la densit?e de chaque Nombre de 
 # Affichage des différents regroupements de modalité effectués.
 # lors de l'execution finale ou tout simplement pour voir ce qu'il c'est passer, décommenter les lignes suivantes : 
 
-#grid.arrange(.VehAgeBefore, .VehAgeAfter, nrow=2, ncol=1) # clairement, toujours pas.
-#grid.arrange(.DrivAgeBefore, .DrivAgeAfter, nrow=2, ncol=1) # clairement, la non plus.
-#grid.arrange(.VehPowerBefore, .VehPowerAfter, nrow=2, ncol=1) # clairement, ça va pas non plus.
-#grid.arrange(.VehBrandBefore, .VehBrandAfter, nrow=2, ncol=1) # clairement, ça va pas.
+# grid.arrange(.VehAgeBefore, .VehAgeAfter, nrow=2, ncol=1) # clairement, toujours pas.
+# grid.arrange(.DrivAgeBefore, .DrivAgeAfter, nrow=2, ncol=1) # clairement, la non plus.
+# grid.arrange(.VehPowerBefore, .VehPowerAfter, nrow=2, ncol=1) # clairement, ça va pas non plus.
+# grid.arrange(.VehBrandBefore, .VehBrandAfter, nrow=2, ncol=1) # clairement, ça va pas.
 ```
 
 
