@@ -139,6 +139,12 @@ On a donc à notre disposition les variables suivantes :
 # De plus, j'ai séparer dans deux chunks les regrouppements de modalitées et les fitting de modèles. Pas sur qu'il fallais faire comme ça. J'ai peut d'avoir trop regroupper car mes modèles fittent très bien. Ou alors c'est juste que la BDD est enorme. 
 
 
+# A propos des graphiques : 
+# Plutot que de faire simplement des histogrames, en comptant 1 dans chaque observation, il faurais compter l'exposure de chaque observation... Je ne sais pas comme faire. 
+# Ou plutot si, je sais
+
+
+
 
 # Commençons par réduire la taille de la data pour pouvoir travailler tranquilement si besoin. (pas obligatoire)
 # df <- sample_frac(data.freq,0.05)
@@ -150,63 +156,74 @@ df[cols] <- lapply(df[cols], function(x) factor(x))
 str(df)
 
 par(mfrow=c(2,2))
+
+
+
+# Fonction qui fabrique les plots : prérequis : 
+makeplot <- function(data,var,title="Before",continuous=TRUE){
+  
+  if(continuous){
+  data %>% 
+    ggplot(aes(x = data[,var],weight = Exposure,fill=as.factor(ClaimNb)), environment = environment()) +
+      geom_histogram() +
+      ggtitle(title) %>%
+    return
+  } else{
+  data %>% 
+    ggplot(aes(x = data[,var],weight = Exposure,fill=as.factor(ClaimNb)), environment = environment()) +
+      geom_bar() +
+      ggtitle(title) %>%
+    return
+  }
+  
+}
+
+
 ################################################
 ######################## Traitement de l'age du v?hicule
 ################################################
 # Graphique de l'?tat du monde : 
-df %>% 
-  qplot(data=.,VehAge,facets = ClaimNb ~ .,main = "Before") -> 
-  .VehAgeBefore 
-
+df %>% makeplot("VehAge") -> .VehAgeBefore
+  
 # Ok donc on peut clairement cr?er une classe 30+
 #df[df$VehAge<30,] %>% 
-#  qplot(data=.,VehAge,facets = ClaimNb ~ .) 
+#  qplot(data=.,VehAge,fill = as.factor(ClaimNb)) 
 #et des classes plus petites de 5 ann?es chacunes entre 0 et 20, puis 20-30.
 
 df$VehAge %<>% 
   cut(., breaks = c(0, 5, 10, 15, 20, 30, max(.)), include.lowest = TRUE) %T>%
   {print(summary(.))}
 # Graphique de l'?tat du monde Apr?s : 
-df %>% 
-  qplot(data=.,VehAge,facets = ClaimNb ~ .,main = "After")  -> 
-  .VehAgeAfter 
+df %>% makeplot("VehAge",title = "After",continuous=FALSE) -> .VehAgeAfter 
 
 ################################################
 ######################## Traitement de l'Age du conducteur
 ################################################
 # Graphique de l'?tat du monde : 
-df %>% 
-  qplot(data=.,DrivAge,facets = ClaimNb ~ .,main = "Before") -> 
-  .DrivAgeBefore
+df %>% makeplot("DrivAge") -> .DrivAgeBefore
 # Ok ce coup ci c'est moins flagrant. 
 # On va faire des classes d'age classqiue 18-25 puis 25-35,35-45, etc. jusqu'a 75+ ou 85+ en fonction du nombre de pelo
 
 #df[df$DrivAge > 75,] %>% 
-#  qplot(data=.,DrivAge,facets = ClaimNb ~ .) # Ok donc on prend 85+, mais peut-être qu'on les rassemblera plus-tard (pour des problème de manque de donn?es.)
+#  qplot(data=.,DrivAge,fill = as.factor(ClaimNb)) # Ok donc on prend 85+, mais peut-être qu'on les rassemblera plus-tard (pour des problème de manque de donn?es.)
 
 df$DrivAge %<>% 
   cut(., breaks = c(18, seq(from = 25,to = 85,by = 10), max(.)), include.lowest = TRUE) %T>%
   {print(summary(.))}
 
 # Graphique de l'?tat du monde Apr?s : 
-df %>% 
-  qplot(data=.,DrivAge,facets = ClaimNb ~ .,main = "After") -> 
-  .DrivAgeAfter 
+df %>% makeplot("DrivAge",title="After",continuous=FALSE) -> .DrivAgeAfter 
 ################################################
 ######################## Traitement de la puissance du v?hicule
 ################################################
-df %>% 
-  qplot(data=.,VehPower,facets = ClaimNb ~ .,main = "Before") -> 
-  .VehPowerBefore 
+df %>% makeplot("VehPower") -> .VehPowerBefore 
 
 # Je propose de les regroupp?es 2 par 2 . 
 table(df$VehPower)
 df$VehPower %<>% 
   cut(., breaks = c(4,5,6,7,8,11,15), include.lowest = TRUE,right=FALSE) %T>%
   {print(summary(.))}
-df %>% 
-  qplot(data=.,VehPower,facets = ClaimNb ~ .,main = "After") -> 
-  .VehPowerAfter
+df %>% makeplot("VehPower",title="After",continuous=FALSE) -> .VehPowerAfter
 
 
 ################################################
@@ -222,19 +239,16 @@ df$VehBrand %<>%
 table(df$VehBrand)
 
 # Puis réduisons le nombre de modalitées : Il semble en effet que les codes soit ordonnés.
-df %>% 
-  qplot(data=.,VehBrand,facets = ClaimNb ~ .,main="Before") -> 
-  .VehBrandBefore
+df %>% makeplot("VehBrand",continuous=FALSE) -> .VehBrandBefore
 
 # APrès un premier regrouppement 2 par 2 qui ne fittais pas sur la fréquence, on tente unregrouppement en 3 classes : 
 table(df$VehBrand)
 df$VehBrand %<>% 
   cut(., breaks = c(1,3,7,11), include.lowest = TRUE,right=FALSE) %T>%
   {print(summary(.))}
-df %>%
-  qplot(data=.,VehPower,facets = ClaimNb ~ .,main="After") -> 
-  .VehBrandAfter
 
+
+df %>% makeplot("VehBrand",title="After",continuous=FALSE) -> .VehBrandAfter
 # Les variables créers VariableBefore et VariableAfter contienne des graphiques, que l'on plottera plus tard. 
 # Les modifications des variables ont été dirrectement appliquées à la base de données 'df', ces variables servent juste a l'affichage.
 
@@ -266,10 +280,10 @@ En effet, au vue des graphiques suivant donnant la densit?e de chaque Nombre de 
 # Affichage des différents regroupements de modalité effectués.
 # lors de l'execution finale ou tout simplement pour voir ce qu'il c'est passer, décommenter les lignes suivantes : 
 
-#grid.arrange(.VehAgeBefore, .VehAgeAfter, nrow=1, ncol=2)
-#grid.arrange(.DrivAgeBefore, .DrivAgeAfter, nrow=1, ncol=2)
-#grid.arrange(.VehPowerBefore, .VehPowerAfter, nrow=1, ncol=2)
-#grid.arrange(.VehBrandBefore, .VehBrandAfter, nrow=1, ncol=2)
+#grid.arrange(.VehAgeBefore, .VehAgeAfter, nrow=2, ncol=1) # clairement, toujours pas.
+#grid.arrange(.DrivAgeBefore, .DrivAgeAfter, nrow=2, ncol=1) # clairement, la non plus.
+#grid.arrange(.VehPowerBefore, .VehPowerAfter, nrow=2, ncol=1) # clairement, ça va pas non plus.
+#grid.arrange(.VehBrandBefore, .VehBrandAfter, nrow=2, ncol=1) # clairement, ça va pas.
 ```
 
 
