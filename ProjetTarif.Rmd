@@ -13,11 +13,10 @@ output:
 
 ### Instalation des packages n?c?ssaires : si vous avez besoin de CASdataset d?commentez la ligne : 
      #install.packages("CASdatasets", repos = "http://dutangc.free.fr/pub/RRepos/", type="source") # ligne sp?ciale pour CASdatasets qui ne vient pas de la meme source (pas de CRAN)
-    .list.of.packages <- c("CASdatasets","dplyr", "xts", "sp", "magrittr","ggplot2","gridExtra","gtable","grid","tidyr", "purrr","broom","pscl")
+    .list.of.packages <- c("dplyr", "xts", "sp", "magrittr","ggplot2","gridExtra","gtable","grid","tidyr", "purrr","broom","pscl")
     .new.packages <- .list.of.packages[!(.list.of.packages %in% installed.packages()[,"Package"])]
     if(length(.new.packages)) install.packages(.new.packages)
     lapply(.list.of.packages,function(x){library(x,character.only=TRUE)}) 
-    
 ### Formating color in markdown : doit être utiliser comme ?a : `r colFmt("MY RED TEXT",'red')`
     .colFmt = function(x,color){
       outputFormat = rmarkdown::all_output_formats(knitr::current_input())#opts_knit$get("rmarkdown.pandoc.to")
@@ -29,52 +28,55 @@ output:
         x
       print("warnings dont matter, the point was to use the first condition")
     }
+
+    
+    
 ```
 
 # TARIFICATION PAR MODELES LINEAIRES GENERALISES EN ASSURANCE NON VIE : Consignes
 
-**Objectif** : proposer un tarif en appliquant diff?rentes m?thodes de tarification (fr?quence-coût moyen ou non) vues en cours impliquant l&#39;usage des modèles lin?aires g?n?ralis?s (GLM). Ce tarif pourra (ou non) être segment? par profil pour tenir compte de l&#39;h?t?rog?n?it? du risque.
+**Objectif** : proposer un tarif en appliquant diff?rentes m?thodes de tarification (fréquence-coût moyen ou non) vues en cours impliquant l'usage des modèles linéaires généralisés (GLM). Ce tarif pourra (ou non) être ségment? par profil pour tenir compte de l'apétence du risque.
 
 **Logiciel utilis?** : logiciel R (logiciel libre Open Source de statistiques).
 
-**Contexte** : ? partir d&#39;une base sinistre d&#39;un portefeuille r?el d&#39;assurance non vie, plus pr?cis?ment en assurance automobile (garantie Responsabilit? Civile). Les bases SINISTRE et CONTRAT ? ?tudier sont contenues dans la librairie **CASdatasets** de R.
+**Contexte** : ? partir d'une base sinistre d'&#39;'un portefeuille r?el d&#39;assurance non vie, plus précisément en assurance automobile (garantie Responsabilité Civile). Les bases SINISTRE et CONTRAT ? étudier sont contenues dans la librairie **CASdatasets** de R.
 
-Les donn?es ? importer s&#39;intitulent **freMTPL2freq** et **freMTPL2sev**.
+Les données ? elles s'intitulent **freMTPL2freq** et **freMTPL2sev**.
 
-La signification des variables est fournie dans les fichiers d&#39;aide de R.
+La signification des variables est fournie dans les fichiers d'aide de R.
 
-Les caract?ristiques sur les v?hicules et les assur?s ont ?t? collect?es lors de la phase de souscription des contrats.
+Les caractéristiques sur les véhicules et les assurés ont été collect?es lors de la phase de souscription des contrats.
 
-`r .colFmt("La fa?on de mener le projet (m?thodes envisag?es, test?es, appr?ciation des r?sultats) est volontairement laiss?e très libre afin de responsabiliser les ?tudiants et leur permettre de d?velopper un esprit critique.",'red')`
-
-
-
-**Informations pratiques** : le projet se fait par groupe de 4 (aucun travail impliquant un nombre diff?rent d&#39;?tudiants ne sera not?, hormis pour un groupe si le nombre d&#39;?tudiants global n&#39;est pas un multiple de 4). Il est ? rendre pour le 14 janvier 2018 avril minuit maximum en renvoyant ? l&#39;adresse [xavier.milhaud@univ-lyon1.fr](mailto:xavier.milhaud@univ-lyon1.fr) les documents suivants:
-
-- --un rapport qui d?crit votre approche et vos r?sultats,
-- --le script R **comment?** qui vous a servi ? obtenir vos r?sultats.
-
-Ce rapport ne devra pas d?passer 6 pages (sans compter la page de garde si vous en mettez une, et hors annexes ?ventuelles où des graphiques ou autres informations peuvent être ins?r?s). La taille des annexes est ?galement limit?e ? 5 pages.
-
-**Les fichiers envoy?s devront être nomm?s de la fa?on suivante: nom1-nom2-nom3-nom4.extension**
-
-**`r .colFmt("Vous devez vous inspirer du travail r?alis? en TP de tarification.",'red')`**
-
-**Etapes du projet** : fusionner les bases &quot;Sinistres&quot; et &quot;Contrats&quot; de manière ? faire le lien entre les montants de sinistre et les contrats qui y sont li?s.
+`r .colFmt("La façon de mener le projet (méthodes envisagées, testées, appréciation des résultats) est volontairement laissée très libre afin de responsabiliser les étudiants et leur permettre de développer un esprit critique.",'red')`
 
 
 
-Voici les grandes ?tapes attendues ? titre indicatif, mais vous pouvez bien sûr d?velopper d&#39;autres ?tapes personnelles:
+**Informations pratiques** : le projet se fait par groupe de 4 (aucun travail impliquant un nombre différent d'&#39;'étudiants ne sera noté, hormis pour un groupe si le nombre d'étudiants global n'est pas un multiple de 4). Il est à rendre pour le 14 janvier 2018 avril minuit maximum en renvoyant à l'adresse [xavier.milhaud@univ-lyon1.fr](mailto:xavier.milhaud@univ-lyon1.fr) les documents suivants:
 
-1. 1)Proposer des statistiques descriptives sur l&#39;ensemble des informations de la base de donn?es: tableaux d&#39;effectifs; indicateurs statistiques classiques; indicateurs de corr?lation; densit?s… En d?duire des messages et des actions ? mener pour la mod?lisation ? venir.
+- --un rapport qui décrit votre approche et vos résultats,
+- --le script R **comment?** qui vous a servi à obtenir vos résultats.
 
-1. 2)Estimer des modèles de tarification pour expliquer la charge sinistre en fonction des facteurs de risque. Sur la base d&#39;un raisonnement justifi? et clair, optimiser le modèle de fa?on ? retenir le modèle qui vous parait le meilleur selon un critère que vous expliciterez.
+Ce rapport ne devra pas dépasser 6 pages (sans compter la page de garde si vous en mettez une, et hors annexes éventuelles où des graphiques ou autres informations peuvent être insérés). La taille des annexes est également limitée à 5 pages.
 
-1. 3)Vous ne retiendrez ? la fin qu&#39;une unique mod?lisation parmi l&#39;ensemble des types de mod?lisation test?es. Expliquez et justifiez votre choix.
+**Les fichiers envoyés devront être nommés de la façon suivante: nom1-nom2-nom3-nom4.extension**
 
-1. 4)En d?duire un tarif individualis? en fonction des caract?ristiques des assur?s. Interpr?ter les r?sultats de manière concrète, et comparer ces r?sultats ? votre historique.
+**`r .colFmt("Vous devez vous inspirer du travail réalisé en TP de tarification.",'red')`**
 
-1. 5)Apportez une vision critique de votre mod?lisation, et donnez des pistes d&#39;am?lioration potentielles si cela est possible.
+**Etapes du projet** : fusionner les bases &quot;Sinistres&quot; et &quot;Contrats&quot; de manière à faire le lien entre les montants de sinistre et les contrats qui y sont liés.
+
+
+
+Voici les grandes étapes attendues à titre indicatif, mais vous pouvez bien sûr développer d'autres étapes personnelles:
+
+1. 1)Proposer des statistiques descriptives sur l'ensemble des informations de la base de données: tableaux d'effectifs; indicateurs statistiques classiques; indicateurs de corrélation; densités… En déduire des messages et des actions à mener pour la modélisation à venir.
+
+1. 2)Estimer des modèles de tarification pour expliquer la charge sinistre en fonction des facteurs de risque. Sur la base d'un raisonnement justifié et clair, optimiser le modèle de façon à retenir le modèle qui vous parait le meilleur selon un critère que vous expliciterez.
+
+1. 3)Vous ne retiendrez à la fin qu'une unique modélisation parmi l'ensemble des types de modélisation testées. Expliquez et justifiez votre choix.
+
+1. 4)En déduire un tarif individualisé en fonction des caractéristiques des assurés. Interpréter les résultats de manière concrète, et comparer ces résultats à votre historique.
+
+1. 5)Apportez une vision critique de votre modélisation, et donnez des pistes d'amélioration potentielles si cela est possible.
 
 
 
@@ -85,13 +87,16 @@ Voici les grandes ?tapes attendues ? titre indicatif, mais vous pouvez bien sûr
 
 Les bases SINISTRE et CONTRAT à étudier sont contenues dans la librairie **CASdatasets** de R. Les données à importer s'intitulent **freMTPL2freq** et **freMTPL2sev**.
 
-```{r R?cup?ration des donn?es,output=FALSE}
+```{r Récupération des données,output=FALSE}
 
-# On r?cupère les deux datasets : 
+# On récupère les deux datasets : 
   data(freMTPL2freq)
   data(freMTPL2sev)
+# # Comme le package n'est pas a jour, nous effectuons une importation locale
+#   load("freMTPL2freq.rda")
+#   load("freMTPL2sev.rda")
 
-# on les renomes pour sauvegarder leur version originale : 
+# on les renomes pour sauvegarder leurs versions originales : 
   data.freq <- freMTPL2freq
   data.sev <- freMTPL2sev
 
@@ -122,7 +127,25 @@ On a donc à notre disposition les variables suivantes :
 * Dans la base contrat : 
     * IDpol : Identifiant police
     * ClaimAmout : Cout total du sinistre, vu a une date récente ( à l'ultime).
+    
+```{r "Data management : Section du jeu de données en un jeu d'apprentissage et un jeu de test & petites clarifications"}
 
+#data.freq$ClaimNb n'est pas un vecteur de la même taille que le jeu de données. réctifions
+data.freq$ClaimNb <- as.vector(data.freq$ClaimNb)
+
+# On se fixe une porportion de notre jeux de données sur lequel nous allons entrainer nos models puis de quoi le backtester
+# On note proper car ce sont nos jeux de données tout neufs :)
+proportion = 0.80
+
+#Je fais une liste d'éléments pris au hazard dans les indices de notre BDD de fréquence
+index_entrainement <- seq(from = 1, to = nrow(data.freq)) %>% sample(.,size = proportion * nrow(data.freq))
+
+proper.train.freq <- data.freq[index_entrainement,]
+cat("Une proportion de",round(100* nrow(proper.train.freq) / nrow(data.freq), 2), "% a été conservé pour entrainer nos modèles\n")
+
+proper.test.freq <- data.freq[! seq(from = 1, to = nrow(data.freq)) %in% index_entrainement, ]
+
+```
 
 # Partie fréquence 
 
@@ -132,9 +155,8 @@ On a donc à notre disposition les variables suivantes :
 ######################## Mise en place de l'environnement
 ################################################
 
+train.freq <- proper.train.freq
 
-
-# ACHTUNG : Je n'ai pas commencer par poser un dataset d'échantillogane et un dataset de validation. Il faudrais le faire. 
 # Ainsi tout ce que j'ai fait ici est en fait a faire uniquement sur le dataset d'apprentissage. 
 # De plus, j'ai séparer dans deux chunks les regrouppements de modalitées et les fitting de modèles. Pas sur qu'il fallais faire comme ça. J'ai peut d'avoir trop regroupper car mes modèles fittent très bien. Ou alors c'est juste que la BDD est enorme. 
 
@@ -144,20 +166,16 @@ On a donc à notre disposition les variables suivantes :
 # Ou plutot si, je sais
 
 
-
-
 # Commençons par réduire la taille de la data pour pouvoir travailler tranquilement si besoin. (pas obligatoire)
-# df <- sample_frac(data.freq,0.05)
-df <- data.freq
-# Re-factorisons certaines variables :  
-str(df)
+
+# Re-factorisons certaines variables :
+
+str(train.freq)
 cols <- c("VehGas")
-df[cols] <- lapply(df[cols], function(x) factor(x))
-str(df)
+train.freq[cols] <- lapply(train.freq[cols], function(x) factor(x))
+str(train.freq)
 
 par(mfrow=c(2,2))
-
-
 
 # Fonction qui fabrique les plots : prérequis : 
 makeplot <- function(data,var,title="Before",continuous=TRUE){
@@ -176,72 +194,75 @@ makeplot <- function(data,var,title="Before",continuous=TRUE){
 ######################## Traitement de l'age du v?hicule
 ################################################
 # Graphique de l'?tat du monde : 
-df %>% makeplot("VehAge") -> .VehAgeBefore
+train.freq %>% makeplot("VehAge") -> .VehAgeBefore
   
 # Ok donc on peut clairement cr?er une classe 30+
 #df[df$VehAge<30,] %>% 
 #  qplot(data=.,VehAge,fill = as.factor(ClaimNb)) 
 #et des classes plus petites de 5 ann?es chacunes entre 0 et 20, puis 20-30.
 
-df$VehAge %<>% 
+train.freq$VehAge %<>% 
   cut(., breaks = c(0, 5, 10, 15, 20, 30, max(.)), include.lowest = TRUE) %T>%
   {print(summary(.))}
+
 # Graphique de l'?tat du monde Apr?s : 
-df %>% makeplot("VehAge",title = "After",continuous=FALSE) -> .VehAgeAfter 
+train.freq %>% makeplot("VehAge",title = "After",continuous=FALSE) -> .VehAgeAfter 
 
 ################################################
 ######################## Traitement de l'Age du conducteur
 ################################################
 # Graphique de l'?tat du monde : 
-df %>% makeplot("DrivAge") -> .DrivAgeBefore
+train.freq %>% makeplot("DrivAge") -> .DrivAgeBefore
 # Ok ce coup ci c'est moins flagrant. 
 # On va faire des classes d'age classqiue 18-25 puis 25-35,35-45, etc. jusqu'a 75+ ou 85+ en fonction du nombre de pelo
 
 #df[df$DrivAge > 75,] %>% 
 #  qplot(data=.,DrivAge,fill = as.factor(ClaimNb)) # Ok donc on prend 85+, mais peut-être qu'on les rassemblera plus-tard (pour des problème de manque de donn?es.)
 
-df$DrivAge %<>% 
+train.freq$DrivAge %<>% 
   cut(., breaks = c(18, seq(from = 25,to = 85,by = 10), max(.)), include.lowest = TRUE) %T>%
   {print(summary(.))}
 
 # Graphique de l'?tat du monde Apr?s : 
-df %>% makeplot("DrivAge",title="After",continuous=FALSE) -> .DrivAgeAfter 
+train.freq %>% makeplot("DrivAge",title="After",continuous=FALSE) -> .DrivAgeAfter 
 ################################################
 ######################## Traitement de la puissance du v?hicule
 ################################################
-df %>% makeplot("VehPower") -> .VehPowerBefore 
+train.freq %>% makeplot("VehPower") -> .VehPowerBefore 
 
 # Je propose de les regroupp?es 2 par 2 . 
-table(df$VehPower)
-df$VehPower %<>% 
+table(train.freq$VehPower)
+train.freq$VehPower %<>% 
   cut(., breaks = c(4,5,6,7,8,11,15), include.lowest = TRUE,right=FALSE) %T>%
   {print(summary(.))}
-df %>% makeplot("VehPower",title="After",continuous=FALSE) -> .VehPowerAfter
+
+train.freq %>% makeplot("VehPower",title="After",continuous=FALSE) -> .VehPowerAfter
 
 
 ################################################
 ######################## Traitement de la marque du véhicule 
 ################################################
 # Commençons par les normaliser : 
-table(df$VehBrand)
-df$VehBrand %<>% 
+table(train.freq$VehBrand)
+
+train.freq$VehBrand %<>% 
   as.character %>% 
-  strsplit("B") %>% 
-  do.call(rbind,.) %>% 
-  {as.numeric(.)[(nrow(df)+1):(2*nrow(df))]}
-table(df$VehBrand)
+  gsub("B", "", .) %>%
+  {as.numeric(.)}
+
+table(train.freq$VehBrand)
 
 # Puis réduisons le nombre de modalitées : Il semble en effet que les codes soit ordonnés.
-df %>% makeplot("VehBrand",continuous=FALSE) -> .VehBrandBefore
+train.freq %>% makeplot("VehBrand",continuous=FALSE) -> .VehBrandBefore
 
 # APrès un premier regrouppement 2 par 2 qui ne fittais pas sur la fréquence, on tente unregrouppement en 3 classes : 
-table(df$VehBrand)
-df$VehBrand %<>% 
+table(train.freq$VehBrand)
+train.freq$VehBrand %<>% 
   cut(., breaks = c(1,3,7,11), include.lowest = TRUE,right=FALSE) %T>%
   {print(summary(.))}
 
 
-df %>% makeplot("VehBrand",title="After",continuous=FALSE) -> .VehBrandAfter
+train.freq %>% makeplot("VehBrand",title="After",continuous=FALSE) -> .VehBrandAfter
 # Les variables créers VariableBefore et VariableAfter contienne des graphiques, que l'on plottera plus tard. 
 # Les modifications des variables ont été dirrectement appliquées à la base de données 'df', ces variables servent juste a l'affichage.
 
@@ -250,22 +271,18 @@ df %>% makeplot("VehBrand",title="After",continuous=FALSE) -> .VehBrandAfter
 ################################################
 
 # Regardons la tete du dataset : 
-str(df)
-
-# Une fois les regrouppements faits, on peut considérer qu'on va les utiliser ET pour la fréquence ET pour le cout moyen. 
-# Remettons donc la bdd obtenue dans ata.freq : 
-data.freq <- df
+str(train.freq)
 
 
 ```
 
 
-Apr?s analyse du dataset, nous avons discr?tiser certains variables quatitatives via les classes de disc?tisation suivantes : 
+Aprés analyse du dataset, nous avons discrétiser certains variables quatitatives via les classes de disccrétisation suivantes : 
 
-* Pour l'age du v?hicule : `r names(table(df$VehAge))`
-* Pour l'age du conducteur  : `r names(table(df$DrivAge))`
-* Pour la puissance du v?hicule : `r names(table(df$VehPower))`
-* Pour le carburant : `r names(table(df$VehGas))`
+* Pour l'age du véhicule : `r names(table(train.freq$VehAge))`
+* Pour l'age du conducteur  : `r names(table(train.freq$DrivAge))`
+* Pour la puissance du véhicule : `r names(table(train.freq$VehPower))`
+* Pour le carburant : `r names(table(train.freq$VehGas))`
 
 En effet, au vue des graphiques suivant donnant la densit?e de chaque Nombre de sinistre en fonction de ces variables, ces classifications nous ont parues logiques : 
 
@@ -300,20 +317,15 @@ Autorelevel <- function(dataset){
     for (i in names(Filter(is.factor,dataset))){
       dataset[,i] <- relevel(dataset[,i],.ProfilDeRef[i])
     }
+    
     return(dataset)
 }
 
 # on applique a notre dataset : 
-data.freq %<>% Autorelevel
+train.freq %<>% Autorelevel
 
 
 ```
-
-
-
-
-
-
 
 
 Une fois ces discrétisations primaire effectuées, nous allons essayer de fitter un modèle GLM log-poisson sur la fréquence. 
@@ -332,10 +344,7 @@ On choisis aléatoirement des échantillons, on fitte les modèles sur ces écha
 
 Une sorte de GLM bootstrapé. Why not :)
 
-
-
-
-```{r Renormalisation de la fr?quence}
+```{r Renormalisation de la fréquence}
 
 # ici on continue d'utiliser data.freq, car on travaille surla fréquence.
 
@@ -360,18 +369,18 @@ mod.freq <- list()
 ################################################
 # Passons a la BDD avec les regrouppements de modalité appliqué : Par déffaut on vire IDPOL
 
-mod.freq$poissonLog<- data.freq %>% 
+mod.freq$poissonLog<- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
-mod.freq$poissonLog2<- data.freq %>% 
+mod.freq$poissonLog2<- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
 
 #AreaF, AreaB et Density ne fittent pas bien. 
 # retirons density : 
-mod.freq$poissonLog3<- data.freq %>% 
+mod.freq$poissonLog3 <- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas, offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 #Ok c'est un tout petit peu mieux. Density explique probablement AreaF, ou en tout cas elles apporte la meme information.
@@ -381,7 +390,7 @@ mod.freq$poissonLog3<- data.freq %>%
 ################################################
 ######################## Modèles poissoniens surdispersés
 ################################################
-mod.freq$odPoissonLog<- data.freq %>% 
+mod.freq$odPoissonLog<- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas , offset=log(Exposure), family=quasipoisson(link=log)) %T>%
   {print(summary(.))}
 
@@ -391,11 +400,11 @@ mod.freq$odPoissonLog<- data.freq %>%
 # on a es problèmes avecles Area, car les AreaB et AreaF sont moins représentées que les autres. 
 # il faudrais peut-être regroupper.
 #Bon OK meme en regrouppant ça fitte pas. Donc on les dégage.
-mod.freq$odPoissonLog2<- data.freq %>% 
+mod.freq$odPoissonLog2<- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehGas , offset=log(Exposure), family=quasipoisson(link=log)) %T>%
   {print(summary(.))}
 
-mod.freq$PoissonLog4<- data.freq %>% 
+mod.freq$PoissonLog4<- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehGas , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
@@ -422,11 +431,6 @@ data = data.frame(Y = c(1,2,3,4),
 glm(data=data,formula=Y ~ .,offset=log(Expo),family=poisson(link=log))
 
 
-
-
-
-
-
 # Tout mes modèles ont pour l'instant un AIC supperieur au poisson stanard. 
 
 # enfait on pourrais meme en rajouter pleins d'autres. A la fin on fera un classement selon un critère objectif pour retenir le meilleur. 
@@ -434,10 +438,6 @@ glm(data=data,formula=Y ~ .,offset=log(Expo),family=poisson(link=log))
 
 # Ok je vais faire ça. 
 # Je pense que j'ai trop regroupper a priorit. Je vais essayer en supprimant un regroupement ou deux, et juste en mettant en facteur certaines variables. ou alors en faisant des regroupement moins violents, par exemple un pas e discretisation de 5 au lieu e 10 pourles ages ou qqch comme ça. 
-
-
-
-
 
 # Comparons les résultats : 
 dfMod.freq <- 
@@ -453,112 +453,120 @@ dfMod.freq <-
 dfMod.freq %>% unnest(glance)
 dfMod.freq %>% unnest(tidy)
 
-
-
-# je vient de faire un truc de ouf : j'ai mit des GLM dans un data.frame, et avec la meme methode ( si on oublis les unnest) je met des df dans des df :)
-
-
+# finalement on selectionne le modèle qu'on souhaite prédire : 
+mod.freq$selected <- mod.freq$PoissonLog4
 
 ```
 
-
-
-
 # Partie Couts moyens 
  
- 
-```{r "Base sévérité : typage des champs et regrouppement de modalit?es",include=FALSE}
+```{r "Base sévérité : Préparation de notre jeux de données",include=FALSE}
 
 #_________La première étape est de jointer les bases de données sur la IDPol
 
 # c'est partit : 
-data <- full_join(data.freq,data.sev)
-
+#Joignons naivement nos données, nous garderons que celles qui présentent un claimamount (sinon elles ne servent à rien...)
 #On ne retient que les polices sinistrées
-sev <- subset(data, ClaimNb > 0)
+#On exclue les ligne sans montant de sinistre
 
+train.sev <- dplyr::full_join(proper.train.freq,data.sev) %>%
+  subset(ClaimNb >0) %>%
+  subset(ClaimAmount >0)
 
-#On exclue les ligne sans montant de sinistre: il y en a 9000 environ
-sev <- subset(sev, ClaimAmount > 0)
-
-
-#________Voici venu le temps de s'intéresser à la mise en forme et à l'analyse des données de cette base
-
-# plutot que de te retaper les factorisaisons des vairbales, je les ai remise plus haut dans data.freq, comme ça tu n'a plus a les gérer ici. 
-
-
-
-
-
-
-
+cat("Nombre de ligne dans notre base :", nrow(train.sev), paste0("\n", "Nombre de numero d'identifiant différent dans notre base :"), length(unique(train.sev$IDpol)), "\n")
 
 
 ```
 
+```{r "On pose nos modèles de coût", output = FALSE}
+
+#regroupement de modalité pour créer le modèle de coût
+
+#________Voici venu le temps de s'intéresser à la mise en forme et à l'analyse des données de cette base
+mod.sev <- list()
+
+#On entraine un premier modèle random, histoire de pouvoir prédire par la suite
+mod.sev$gammalog1 <- train.sev %>% 
+  glm (data = ., ClaimAmount ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehGas, family=Gamma(link=log)) %T>%
+  {print(summary(.))}
+
+mod.sev$selected <- mod.sev$gammalog1
+
+cat("Modèle très qualitatif\n")
+cat("Modèle très nerveux\n")
+
+```
 
 
-# Partie Remise ensemble, pr?diction, etc..
+```{r "Regroupement des modalités en vue d'un tarrif basé sur fréquence x coût"}
+
+#
+# On met en facteur les modalités de la base de test de fréquence
+#
 
 
+# il faudrais prévoir une fonction a la fin du fitting de fréquence qui comporte l'ensemble des regrouppements de données. 
+# ainsi on aura qu'a la lancer ici sur la base de tests.
+# la on duplique du code pour rien.
+# meme commentaire pour le modèle de cout.
 
 
+test.freq <- proper.test.freq
+
+cols <- c("VehGas")
+test.freq[cols] <- lapply(test.freq[cols], function(x) factor(x))
+
+test.freq$VehAge %<>% 
+  cut(., breaks = c(0, 5, 10, 15, 20, 30, max(.)), include.lowest = TRUE) %T>%
+  {print(summary(.))}
+
+test.freq$DrivAge %<>% 
+  cut(., breaks = c(18, seq(from = 25,to = 85,by = 10), max(.)), include.lowest = TRUE) %T>%
+  {print(summary(.))}
+
+test.freq$VehPower %<>% 
+  cut(., breaks = c(4,5,6,7,8,11,15), include.lowest = TRUE,right=FALSE) %T>%
+  {print(summary(.))}
+
+test.freq$VehBrand %<>% 
+  as.character %>% 
+  gsub("B", "", .) %>% 
+  {as.numeric(.)}
+
+test.freq$VehBrand %<>% 
+  cut(., breaks = c(1,3,7,11), include.lowest = TRUE,right=FALSE) %T>%
+  {print(summary(.))}
+
+#
+# On met en facteur les modalités de la base de test de cout
+#
+
+# Néant.
+# On garde tout ? On va avoir un problème pour merger ça avec la test.freq.
+test.sev <- dplyr::full_join(proper.test.freq,data.sev) %>%
+  subset(ClaimNb >0)
+
+```
 
 
+```{r "Prédictions"}
+
+#Seulement sur base des models selectionnés
 
 
-Maintenant que nos variables explicatives sont bien leveled, on va rassembler les deux bases.
-
-Pas sur que ce soit tr?s interessant e merger les deux bases. 
-On va plutot fitter s?par?ment les deux . 
-
-```{r Merging des donn?es}
-
-# Verifions tout d'abord que les IDpol dispo dans la base de contrat (celle donnant les montant le sinistres, data.sev) sont bien unique dans la première base : 
-
-# Il y a surrement  une correpondance 1/inf entre les identifiant police des deux bases 'IDpol'. EN d'autres termes, la base sinistre contient une ligne par sinistre et les montants pr?sent dedans sont donc des montant individuel de sinistre et non pas agr?g?. Arguments sur le choix du type de jonction : 
-      # dim(left_join(data.freq,data.sev))[1] == dim(data.freq)[1]  # doit retourner faux.
-      # prod(unique(data.freq$IDpol) == data.freq$IDpol) == 1 # doit retourner vrai
-      # prod(unique(data.sev$IDpol) == data.sev$IDpol) == 1 # doit retourner faux
-      # 
-      # sum(data.freq$ClaimNb) == nrow(data.sev) # ?a m'aurais arranger que ?a coresponde !!! Malheureusement on est pas dans une relation 1/Inf parfaite...
-      # 
-      # # essayons autrement : 
-      # data.freq %>% group_by(ClaimNb) %>% summarise(n=n())
-      # data.sev %>% group_by(IDpol) %>% summarize(count = n()) %>% group_by(count) %>% summarise(n=n())
-      # # Con de sa race les deux bases ne corespondent pas. 
-      # # chequons les lignes qui ne sont pas complete et qui ont un claimNb diff?rent de 0 
-      # test.join <- left_join(data.freq,data.sev) %>% filter(!complete.cases(.),ClaimNb != 0)
-      # #Ok on a donc a peu près 9000 ligne e sinistre sans valeur ou de sinistres sans donn?es. 
-      # test.join %>% filter(is.na(ClaimAmount))
-      # # Ha ce ne sont que des sinistres sans valeurs. 
-      # 
-      # # Ok c'est pas si grave, on les excluera juste de l'analyse.
-      # #ernier petit test : 
-      # nrow(left_join(data.freq,data.sev)) == nrow(full_join(data.freq,data.sev))
-      # # Bon finalement le left_join n'est pas indiqu?. On va plutot prendre un full_join.
-
-# c'est partit : 
-data <- full_join(data.freq,data.sev)
+prediction.test.freq <- predict.glm(object = mod.freq$selected, newdata = test.freq, type = "response")
+length(prediction.test.freq)
 
 
+prediction.test.sev <- predict.glm(object = mod.sev$selected, newdata = test.sev, type = "response")
+length(prediction.test.sev)
 
+#Construisons la table prédiction VS réalité pour la fréquence :
 
-```{r EstimationFrequence}
+#Si t'es dans test.sev t'es dans test.freq? 
+length(test.sev$IDpol %in% test.freq$IDpol) == length(test.sev$IDpol)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+# a fignoler, voir meme afaire :P
 
 ```
 
