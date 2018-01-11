@@ -13,7 +13,7 @@ output:
 
 ### Instalation des packages n?c?ssaires : si vous avez besoin de CASdataset d?commentez la ligne : 
      #install.packages("CASdatasets", repos = "http://dutangc.free.fr/pub/RRepos/", type="source") # ligne sp?ciale pour CASdatasets qui ne vient pas de la meme source (pas de CRAN)
-    .list.of.packages <- c("dplyr", "xts", "sp", "magrittr","ggplot2","gridExtra","gtable","grid","tidyr", "purrr","broom","pscl")
+    .list.of.packages <- c("CASdatasets","dplyr", "xts", "sp", "magrittr","ggplot2","gridExtra","gtable","grid","tidyr", "purrr","broom","pscl")
     .new.packages <- .list.of.packages[!(.list.of.packages %in% installed.packages()[,"Package"])]
     if(length(.new.packages)) install.packages(.new.packages)
     lapply(.list.of.packages,function(x){library(x,character.only=TRUE)}) 
@@ -54,7 +54,7 @@ Les caractéristiques sur les véhicules et les assurés ont été collect?es lo
 **Informations pratiques** : le projet se fait par groupe de 4 (aucun travail impliquant un nombre différent d'&#39;'étudiants ne sera noté, hormis pour un groupe si le nombre d'étudiants global n'est pas un multiple de 4). Il est à rendre pour le 14 janvier 2018 avril minuit maximum en renvoyant à l'adresse [xavier.milhaud@univ-lyon1.fr](mailto:xavier.milhaud@univ-lyon1.fr) les documents suivants:
 
 - --un rapport qui décrit votre approche et vos résultats,
-- --le script R **comment?** qui vous a servi à obtenir vos résultats.
+- --le script R **commenté** qui vous a servi à obtenir vos résultats.
 
 Ce rapport ne devra pas dépasser 6 pages (sans compter la page de garde si vous en mettez une, et hors annexes éventuelles où des graphiques ou autres informations peuvent être insérés). La taille des annexes est également limitée à 5 pages.
 
@@ -92,18 +92,6 @@ Les bases SINISTRE et CONTRAT à étudier sont contenues dans la librairie **CAS
 # On récupère les deux datasets : 
   data(freMTPL2freq)
   data(freMTPL2sev)
-# # Comme le package n'est pas a jour, nous effectuons une importation locale
-#   load("freMTPL2freq.rda")
-#   load("freMTPL2sev.rda")
-
-# on les renomes pour sauvegarder leurs versions originales : 
-  data.freq <- freMTPL2freq
-  data.sev <- freMTPL2sev
-
-#finalement on peut les regarder : 
-  head(data.freq, n = 20)
-  head(data.sev, n = 20)
-
 
 ```
 
@@ -128,56 +116,138 @@ On a donc à notre disposition les variables suivantes :
     * IDpol : Identifiant police
     * ClaimAmout : Cout total du sinistre, vu a une date récente ( à l'ultime).
     
+    
+## Création d'une base de test et d'une base de train
+
 ```{r "Data management : Section du jeu de données en un jeu d'apprentissage et un jeu de test & petites clarifications"}
 
-#data.freq$ClaimNb n'est pas un vecteur de la même taille que le jeu de données. réctifions
-data.freq$ClaimNb <- as.vector(data.freq$ClaimNb)
+################################################
+######################## Récupération des données et Jonction des deux bases
+################################################
+  data.freq <- freMTPL2freq
+  data.sev <- freMTPL2sev
+  data.full <- full_join(data.freq,data.sev)
 
-# On se fixe une porportion de notre jeux de données sur lequel nous allons entrainer nos models puis de quoi le backtester
-# On note proper car ce sont nos jeux de données tout neufs :)
-proportion = 0.80
+################################################
+######################## Crétation d'une base de test et d'une base de train
+################################################
 
-#Je fais une liste d'éléments pris au hazard dans les indices de notre BDD de fréquence
-index_entrainement <- seq(from = 1, to = nrow(data.freq)) %>% sample(.,size = proportion * nrow(data.freq))
+# paramètre : 
+  .Proportion.Wanted = 0.80
 
-proper.train.freq <- data.freq[index_entrainement,]
-cat("Une proportion de",round(100* nrow(proper.train.freq) / nrow(data.freq), 2), "% a été conservé pour entrainer nos modèles\n")
+# application : 
 
-proper.test.freq <- data.freq[! seq(from = 1, to = nrow(data.freq)) %in% index_entrainement, ]
+  #data.freq$ClaimNb n'est pas un vecteur de la même taille que le jeu de données. réctifions
+  data.full$ClaimNb <- as.vector(data.full$ClaimNb)
+
+  #Je fais une liste d'éléments pris au hazard dans les indices de notre BDD de fréquence
+  .index_entrainement <- (1:nrow(data.full)) %>% sample(.,size = .Proportion.Wanted * nrow(data.full))
+  
+  train.full <- data.full[.index_entrainement,]
+  test.full <- data.full[! seq(from = 1, to = nrow(data.full)) %in% .index_entrainement, ]
+  
+# retour : 
+  .Proportion.Achieved = round(100* nrow(train.full) / nrow(data.freq), 2)
+  
+# Commentaire : Les dataset de traning et de tests d'apellent proper.$$$ pour éviter de les confondre. 
+  # Les dataset data.freq et data.sev sont donc les originaux, non modifiés.
+  
+################################################
+######################## Séparation des bases cout-moyen et des bases fréquences, nétoyage des bases.
+################################################
+
+  .Clean <- . %>% drop_na %>% distinct
+
+  train.freq <- train.full %>%
+    select(-c(ClaimAmount)) %>%
+    .Clean
+  
+  test.freq <- test.full %>% 
+    select(-c(ClaimAmount)) %>%
+    .Clean
+  
+  train.sev <- train.full %>%
+    select(-c(ClaimNb)) %>%
+    .Clean
+  
+  test.sev <- test.full %>% 
+    select(-c(ClaimNb)) %>%
+    .Clean 
+
+################################################
+######################## Rassemblement des bases dans une seule variable Databases
+################################################
+  
+  
+  # L'idée : avoir tout au même endroit. 
+  # On mettrat aussi les modèles dans ce dataset, ça permetra de pas se faire chier pour construire les predictions a la fin.
+  
+  
+  .MyList = list(data.freq,data.sev,data.full,train.freq,train.sev,train.full,test.freq,test.sev,test.full)
+  names(.MyList)=c("data.freq","data.sev","data.full","train.freq","train.sev","train.full","test.freq","test.sev","test.full")
+  Databases <-
+    tibble(Nom = names(.MyList)) %>%
+    mutate(
+      data = .MyList,
+      Type=map_chr(Nom,function(x) unlist(strsplit(x,"[.]"))[1]),
+      Modele=map_chr(Nom,function(x) unlist(strsplit(x,"[.]"))[2]),
+      Nom = "Original.dataset",
+      Selected=FALSE
+    ) %>%
+    select(Modele,Type,Nom,data,Selected) %>%
+    arrange(Modele,Type) %T>%
+    {print(.)}
+
 
 ```
 
+
+
+Préliminairement aux fitting de modèles, il est important de séparer la base en deux : base d'entrainement et base de test.
+
+Tout d'abord nous jointons les deux bases par un full_join, puis nous séparons en base de train et base de test. Ensuite, nous créons les bases de fréquence et cout moeyn pour fitter nos eux modèles indépendants : d'un coté les fréquence, pour laquelle nous droppons la colonne cout puis nous droppons toutes les lignes avec des na et les lignes en double, et de l'autre coté les couts pour laquelle nous droppons tout les couts avec des NA et la colonnne Nombre de sinistres, ainsi queles lignes en double.
+
+
+
+La base etant assez volumineuse, nous choississons de conserver une proportion de `r .Proportion.Achieved` pour entrainer nos modèles. Ainsi, l'autre patie de la base servira a tester nos modèles avent, une fois valider le framework, de fitter nos modèles sur l'intégralité de la base. 
+
+
+
+
 # Partie fréquence 
 
-```{r "Base fréquence : typage des champs et regrouppement de modalitées",include=FALSE}
+## Typage des champs et regrouppements préliminaires
+
+```{r "Base fréquence : typage des champs, regrouppement de modalitées et fitting des modèles",include=FALSE}
 
 ################################################
-######################## Mise en place de l'environnement
+######################## Récupération de la bonne base de donnée  de fréquence 
 ################################################
 
-train.freq <- proper.train.freq
+train.freq <- 
+  Databases %>% 
+  filter(Modele=="freq",Type=="train") %>%
+  .$data %>%
+  `[[`(1)
+
+################################################
+######################## 
+################################################
 
 # Ainsi tout ce que j'ai fait ici est en fait a faire uniquement sur le dataset d'apprentissage. 
 # De plus, j'ai séparer dans deux chunks les regrouppements de modalitées et les fitting de modèles. Pas sur qu'il fallais faire comme ça. J'ai peut d'avoir trop regroupper car mes modèles fittent très bien. Ou alors c'est juste que la BDD est enorme. 
 
-
-# A propos des graphiques : 
-# Plutot que de faire simplement des histogrames, en comptant 1 dans chaque observation, il faurais compter l'exposure de chaque observation... Je ne sais pas comme faire. 
-# Ou plutot si, je sais
-
-
 # Commençons par réduire la taille de la data pour pouvoir travailler tranquilement si besoin. (pas obligatoire)
 
 # Re-factorisons certaines variables :
-
-str(train.freq)
-cols <- c("VehGas")
-train.freq[cols] <- lapply(train.freq[cols], function(x) factor(x))
-str(train.freq)
+  str(train.freq)
+  cols <- c("VehGas")
+  train.freq[cols] <- lapply(train.freq[cols], function(x) factor(x))
+  str(train.freq)
 
 par(mfrow=c(2,2))
 
-# Fonction qui fabrique les plots : prérequis : 
+# Fonction qui fabrique les plots expliquant les regrouppements de modalités choisis : prérequis : 
 makeplot <- function(data,var,title="Before",continuous=TRUE){
   
   p <- data %>% ggplot(aes(x = data[,var],weight = Exposure,fill=as.factor(ClaimNb)), environment = environment())
@@ -290,10 +360,10 @@ En effet, au vue des graphiques suivant donnant la densit?e de chaque Nombre de 
 # Affichage des différents regroupements de modalité effectués.
 # lors de l'execution finale ou tout simplement pour voir ce qu'il c'est passer, décommenter les lignes suivantes : 
 
-# grid.arrange(.VehAgeBefore, .VehAgeAfter, nrow=2, ncol=1) # clairement, toujours pas.
-# grid.arrange(.DrivAgeBefore, .DrivAgeAfter, nrow=2, ncol=1) # clairement, la non plus.
-# grid.arrange(.VehPowerBefore, .VehPowerAfter, nrow=2, ncol=1) # clairement, ça va pas non plus.
-# grid.arrange(.VehBrandBefore, .VehBrandAfter, nrow=2, ncol=1) # clairement, ça va pas.
+grid.arrange(.VehAgeBefore, .VehAgeAfter, nrow=2, ncol=1) # clairement, toujours pas.
+grid.arrange(.DrivAgeBefore, .DrivAgeAfter, nrow=2, ncol=1) # clairement, la non plus.
+grid.arrange(.VehPowerBefore, .VehPowerAfter, nrow=2, ncol=1) # clairement, ça va pas non plus.
+grid.arrange(.VehBrandBefore, .VehBrandAfter, nrow=2, ncol=1) # clairement, ça va pas.
 ```
 
 
@@ -344,29 +414,25 @@ On choisis aléatoirement des échantillons, on fitte les modèles sur ces écha
 
 Une sorte de GLM bootstrapé. Why not :)
 
-```{r Renormalisation de la fréquence}
+```{r "Fitting d'un modèle de fréquence sur la base fréquence",include=FALSE}
 
-# ici on continue d'utiliser data.freq, car on travaille surla fréquence.
 
-# Attention, on met l'exposure en offset 
+
+################################################
+######################## Setup de l'environnement
+################################################
 # On utilise ici une liste "mod.freq" qui contiendra tout les modèles qu'on va fabriquer sur la partie frequence.
 mod.freq <- list()
-
-# commençons par poser un modèle sur la BDD de fréquence non modifiée, brutalement avec stepAIC : 
-# mod.freq$Brutal<- freMTPL2freq %>% 
-#   select(-c(IDpol)) %>%
-#   glm (data = ., ClaimNb ~ . , offset=log(Exposure), family=poisson(link=log)) %T>%
-#   {print(summary(.))}
-
-
-
-#names(data.freq)
-# IDpol + ClaimNb + Exposure + Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region
-
 
 ################################################
 ######################## Modèles Poissoniens
 ################################################
+
+# Attention, on met l'exposure en offset 
+
+#names(data.freq)
+# IDpol + ClaimNb + Exposure + Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region
+
 # Passons a la BDD avec les regrouppements de modalité appliqué : Par déffaut on vire IDPOL
 
 mod.freq$poissonLog<- train.freq %>% 
@@ -419,42 +485,63 @@ mod.freq$PoissonLog4<- train.freq %>%
 #   {print(summary(.))}
 # 
 
-
-#### Echec : depuis le début je traite l'exposure en offset, mais je la met dans les GLM !!! Ou peut-être pas ? 
-#Testons cela : 
-
-data = data.frame(Y = c(1,2,3,4),
-               X1 = c(3,4,5,6),
-               X2 = c(FALSE,FALSE,TRUE,TRUE),
-               Expo = c(0.1,0.2,0.3,0.5))
-
-glm(data=data,formula=Y ~ .,offset=log(Expo),family=poisson(link=log))
-
-
 # Tout mes modèles ont pour l'instant un AIC supperieur au poisson stanard. 
 
-# enfait on pourrais meme en rajouter pleins d'autres. A la fin on fera un classement selon un critère objectif pour retenir le meilleur. 
-# on pourra essayer selon un AIC, un BIC ou autre :)
-
-# Ok je vais faire ça. 
-# Je pense que j'ai trop regroupper a priorit. Je vais essayer en supprimant un regroupement ou deux, et juste en mettant en facteur certaines variables. ou alors en faisant des regroupement moins violents, par exemple un pas e discretisation de 5 au lieu e 10 pourles ages ou qqch comme ça. 
+################################################
+######################## Regrouppement des modèles fittés
+################################################
 
 # Comparons les résultats : 
-dfMod.freq <- 
-  tibble(Nom = names(mod.freq)) %>%
-  mutate(
-    Mod = mod.freq,
-    family = map(Mod,"family"),
-    glance = Mod %>% map(glance),
-    tidy = Mod %>% map(tidy)
-  )
 
-# On peut par exemple prendre le modèle moyen, dans chaque famille.
-dfMod.freq %>% unnest(glance)
-dfMod.freq %>% unnest(tidy)
 
-# finalement on selectionne le modèle qu'on souhaite prédire : 
-mod.freq$selected <- mod.freq$PoissonLog4
+# ajout des modèles fittés a la base de donnée : 
+AddToDb <- function(.database,liste_des_modeles,.Modele,.Type){
+  
+      # on commence par construire des stats sur les modèles 
+      # Cette partie est un peu longue.
+      # Normal que ce soit pas rapide, ça prend du temps c'est comme ça. 
+      # Beuacoup de data, plus d'une 20aine de modèles différents, etc...
+      dfMod <- 
+      tibble(Nom = names(mod.freq)) %>%
+      mutate(
+        Mod = mod.freq,
+        family = map(Mod,"family"),
+        glance = Mod %>% map(glance),
+        tidy = Mod %>% map(tidy),
+        augment = Mod %>% map(augment),
+        Modele=.Modele,
+        Type=.Type
+      ) %T>% {print(.)}
+    
+      # on jointe les databases
+      .database %<>% full_join(dfMod)
+      .database[!grepl("Original",.database$Nom),] %<>%
+        mutate(data = Mod %>% map("data"))
+      # on revois le resultat
+      return(.database)
+}
+
+
+Databases %<>% 
+  AddToDb(mod.freq,"freq","train") %T>%
+  {print(.)}
+
+################################################
+######################## Selection d'un modèle 
+################################################
+
+# AU vue de tout les modèles fittés, il faudrais définir un critère pour en choisir un. 
+# je pense qu'un bon critère serais de regarder leur AIC et BIC respectifs, voir d'autres statistiques (null.deviance) ou autre.
+# Si c'est le cas, on peut réflechir comme ça : 
+Databases[!map_lgl(Databases$glance,is.null),] %>%
+  select(-c(Modele,Type,data)) %>%
+  unnest(glance) %>%
+  arrange(AIC) # changer ici le critère de classement pour afficher les modèles dans un autre ordre.
+
+# une fois le modèle choisis, mettre TRUE dans sa colonne selected : 
+Databases[Databases$Nom=="poissonLog",]$Selected = TRUE
+
+
 
 ```
 
