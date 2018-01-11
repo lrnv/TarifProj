@@ -210,7 +210,8 @@ data.full %>% makeplot("VehPower",title="After",continuous=FALSE) -> .VehPowerAf
 data.full %>% makeplot("Area",continuous=FALSE) -> .AreaBefore 
 
 data.full$Area %<>% 
-  fct_collapse("EF" = c("E","F")) %T>%
+  fct_collapse("AB" = c("A","B"),
+               "EF" = c("E","F")) %T>%
   {print(summary(.))}
 
 data.full %>% makeplot("Area",title="After",continuous=FALSE) -> .AreaAfter
@@ -275,6 +276,7 @@ data.full %<>% Autorelevel
 ################################################
 
 # paramètre : 
+  set.seed(seed=100)
   .Proportion.Wanted = 0.8 # pour des question de rapiditée d'exection, j'ai déscendu la proportion a 0.01, il faut la remonter a 0.8 avent de rendre le code.
 
 # application : 
@@ -449,11 +451,16 @@ mod.freq$poissonLog2b<- train.freq %>%
 mod.freq$poissonLog2c<- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density, offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
+# c'est encore mieux.
   
-#AreaF, AreaB et Density ne fittent pas bien. 
 # retirons density : 
 mod.freq$poissonLog3 <- train.freq %>% 
-  glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas, offset=log(Exposure), family=poisson(link=log)) %T>%
+  glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehBrand + VehGas, offset=log(Exposure), family=poisson(link=log)) %T>%
+  {print(summary(.))}
+
+# retirons la marque du véhicule : 
+mod.freq$poissonLog4 <- train.freq %>% 
+  glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehGas, offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 #Ok c'est un tout petit peu mieux. Density explique probablement AreaF, ou en tout cas elles apporte la meme information.
 
@@ -485,11 +492,10 @@ mod.freq$PoissonLog4<- train.freq %>%
 ######################## Modèles ZIP
 ################################################
 
-# mod.freq$ZeroInflPoissonLog<- data.freq %>% 
-#   select(-c(IDpol)) %>%
-#   zeroinfl(data = ., formula = ClaimNb ~ . + offset=log(Exposure), dist="poisson") %T>%
-#   {print(summary(.))}
-# 
+mod.freq$ZeroInflPoissonLog <-
+  zeroinfl(data = train.freq, formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region, offset=log(Exposure), dist="poisson") %T>%
+  {print(summary(.))}
+
 
 # Tout mes modèles ont pour l'instant un AIC supperieur au poisson stanard. 
 
@@ -500,8 +506,6 @@ mod.freq$PoissonLog4<- train.freq %>%
   
       # on commence par construire des stats sur les modèles 
       # Cette partie est un peu longue.
-      # Normal que ce soit pas rapide, ça prend du temps c'est comme ça. 
-      # Beuacoup de data, plus d'une 20aine de modèles différents, etc...
       dfMod <- 
       tibble(Nom = names(mod.freq)) %>%
       mutate(
@@ -541,26 +545,31 @@ Databases[Databases$Nom=="poissonLog",]$Selected = TRUE
 ```
 
 # Partie Couts moyens 
- 
-```{r "Base sévérité : Récupération des données",include=FALSE}
 
+
+```{r "Création d'un modèle de cout moyen", output = FALSE}
+
+
+################################################
+######################## Setup de l'environnement
+################################################
+
+# Récupération de la bonne base de donnée  de fréquence 
 train.sev <- 
   Databases %>% 
   filter(Modele=="sev",Type=="train") %>%
   .$data %>%
   `[[`(1) # la première entré de la base c'est les data brutes dans modèle.
 
-cat("Nombre de ligne dans notre base :", nrow(train.sev), paste0("\n", "Nombre de numero d'identifiant différent dans notre base :"), length(unique(train.sev$IDpol)), "\n")
+# On utilise ici une liste "mod.sev" qui contiendra tout les modèles qu'on va fabriquer sur la partie frequence.
+mod.sev <- list()
 
 
-```
-
-```{r "On pose nos modèles de coût", output = FALSE}
 
 #regroupement de modalité pour créer le modèle de coût
 
 #________Voici venu le temps de s'intéresser à la mise en forme et à l'analyse des données de cette base
-mod.sev <- list()
+
 
 #On entraine un premier modèle random, histoire de pouvoir prédire par la suite
 mod.sev$gammalog1 <- train.sev %>% 
@@ -618,22 +627,18 @@ Databases[Databases$Nom=="gammalog1",]$Selected = TRUE
 #Seulement sur base des models selectionnés
 
 # commençons par récupérer les modèles : 
-selec.freq <- Databases %>% 
-  filter(Modele=="freq",Type=="train",Selected==TRUE) %>% .$Mod
+selec.freq <- Databases %>% filter(Modele=="freq",Type=="train",Selected==TRUE) %>% .$Mod
+selec.sev <- Databases %>% filter(Modele=="sev",Type=="train",Selected==TRUE) %>% .$Mod
 
-selec.sev <- Databases %>% 
-  filter(Modele=="sev",Type=="train",Selected==TRUE) %>% .$Mod
+# puis les data : 
+test.freq <- Databases %>% filter(Nom=="Original.dataset",Type=="test",Modele=="freq") %>% .$data
+test.sev <- Databases %>% filter(Nom=="Original.dataset",Type=="test",Modele=="sev") %>% .$data
 
-# Ok il faurais maintenant récupérer sous forme de fonction les regrouppements de modélité effectué dans les modèles selectionés.
-# fais chiiiiiier j'ai passer la nuit dessut j'ai casiment pas avencer...
-
-
-
-prediction.test.freq <- predict.glm(object = mod.freq$selected, newdata = test.freq, type = "response")
+prediction.test.freq <- predict.glm(object = selec.freq, newdata = test.freq, type = "response")
 length(prediction.test.freq)
 
 
-prediction.test.sev <- predict.glm(object = mod.sev$selected, newdata = test.sev, type = "response")
+prediction.test.sev <- predict.glm(object = selec.sev, newdata = test.sev, type = "response")
 length(prediction.test.sev)
 
 #Construisons la table prédiction VS réalité pour la fréquence :
