@@ -29,7 +29,7 @@ output:
       print("warnings dont matter, the point was to use the first condition")
     }
 
-    
+library(corrplot)
     
 ```
 
@@ -119,31 +119,135 @@ On a donc à notre disposition les variables suivantes :
     
 ## Création d'une base de test et d'une base de train
 
-```{r "Data management : Regroupepemnt de modalité, Section du jeu de données en un jeu d'apprentissage et un jeu de test & petites clarifications"}
+
+```{r "Jonction des 2 bases"}
 
 ################################################
-######################## Récupération des données et Jonction des deux bases
+######################## Récupération des données et Jonction des deux bases et typage
 ################################################
   data.freq <- freMTPL2freq
   data.sev <- freMTPL2sev
-  data.full <- full_join(data.freq,data.sev)
+#  data.full <- full_join(data.freq,data.sev)
+
+#Suivant la modélisation retenue (glm brutal ou décomposition fréquence-coût moyen), nous aurons besoins d'utiliser les sinistres cumulés ou la moyenne des sinistres pour chaque police
+sin.cum <- aggregate(ClaimAmount ~ IDpol, data = data.sev, sum)
+names(sin.cum) <- c("IDpol", "Cum_ClaimAmount")
+sin.mean <- aggregate(ClaimAmount ~ IDpol, data = data.sev, mean)
+names(sin.mean) <- c("IDpol", "Mean_ClaimAmount")
+
+#Il ne sous reste plus qu'à joindre la base de frequence avec les 2 autres bases de données
+
+data.full <- merge(merge(data.freq, sin.cum, by="IDpol", all.x=TRUE), sin.mean, by="IDpol", all.x=TRUE)
+
+#Les polices non sinistrées présentent logiquement la valeur NA comme montant moyen et cumulé de sinistres.
+#Il nous faut les remplacer par 0.
+data.full$Cum_ClaimAmount <- replace(data.full$Cum_ClaimAmount, is.na(data.full$Cum_ClaimAmount), 0)
+data.full$Mean_ClaimAmount <- replace(data.full$Mean_ClaimAmount, is.na(data.full$Mean_ClaimAmount), 0)
+
+
+#Pour autant, des polices sinistrées demeurent avec des montants moyen et cumulé de sinistres nuls
+#Nous estimons que ce sont des erreurs dans la base de données et supprimons donc les lignes concernées
+data.full <- data.full[-which(data.full$ClaimNb !=0 & data.full$Cum_ClaimAmount==0),]
+
+
+
+
+################################################
+######################## Typage des données
+################################################
+
+sapply(data.full,class)
+data.full$ClaimNb <- as.numeric(data.full$ClaimNb) #le nombre de sinistres doit naturellement être de type numérique
+data.full$IDpol <- as.factor(data.full$IDpol) #l'identifiant de la police doit être une variable catégorielle
+data.full$VehPower <- as.numeric(data.full$VehPower) #de même pour la puissance du véhicule
+data.full$VehAge <- as.numeric(data.full$VehAge) #l'âge est toujour numérique
+data.full$DrivAge <- as.numeric(data.full$DrivAge) #idem
+data.full$BonusMalus <- as.numeric(data.full$BonusMalus) #le Bonus Malus est un coefficient qui s'applique à la prime, donc est numérique
+data.full$VehGas <- as.factor(data.full$VehGas) #le carburant de du véhicule est une variable catégorielle
+data.full$Density <- as.numeric(data.full$Density) #la densité est de type numérique
+
+sapply(data.full,class)
+
+```
+
+
+
+
+
+
+```{r "Analyse des données"}
+
+################################################
+######################## Correction des données aberrantes
+################################################
+
+#Les données sont annuelles, il est donc anormal de rencontrer des expositions > 1
+#Nous supprimons donc toutes les polices présentant une exposition > 1
+
+data.full <- data.full[-which(data.full$Exposure > 1),]
+
+################################################
+######################## Etude de la corrélation des données
+################################################
+
+###____ Entre variables quantitatives
+
+str(data.full)
+cor_matrix <- cor(data.full[,c(2,3,5,6,7,8,11,13,14)], method = "pearson")
+
+diag(cor_matrix) <- 0
+
+corrplot(cor_matrix)
+
+#Il est intéressant de remarquer que le BonusMalus est positivement corrélé à l'âge du conducteur. Il ne faut pas perdre à l'esprit que le bonus malus se calcule sur la sinistralité passée. Il donne donc une information sur la sinistralité antérieur du conducteur, qui est donc plus susceptible d'être importante s'il est âgé.
+#Les variables Cum_ClaimAmount et Mean_ClaimAmount sont logiquement très corrélées
+
+###____ Entre variables qualitatives -> test du khi2
+
+
+donnees_quali <- data.full[, c(4,9,10,12)]
+str(donnees_quali)
+
+nb <- ncol(donnees_quali)-1
+test_ind <- matrix(0, nrow = nb, ncol = nb)
+for (i in 1:nb){
+  for (j in (i+1):(nb+1)){
+    test_ind[i,j-1] <- chisq.test(table(donnees_quali[,i],donnees_quali[,j]))$p.value
+  }
+}
+colnames(test_ind) <- colnames(donnees_quali[,-1])
+rownames(test_ind) <- colnames(donnees_quali[,-4])
+abs(test_ind)>0.05
+#elles sont toutes indépendantes
+
+
+###___ Analyse en composante principale
+
+#A faire
+
+
+```
+
+
+```{r "Data management : Regroupepemnt de modalité, définition de l'individu de référence, creation du jeu d'apprentissage et du jeu de test & petites clarifications"}
+
 
 ################################################
 ######################## Preliminaires aux regrouppements de modalités
 ################################################
 
-# Ainsi tout ce que j'ai fait ici est en fait a faire uniquement sur le dataset d'apprentissage. 
+ 
 # De plus, j'ai séparer dans deux chunks les regrouppements de modalitées et les fitting de modèles. Pas sur qu'il fallais faire comme ça. J'ai peut d'avoir trop regroupper car mes modèles fittent très bien. Ou alors c'est juste que la BDD est enorme. 
 
 # Commençons par réduire la taille de la data pour pouvoir travailler tranquilement si besoin. (pas obligatoire)
 
 # Re-factorisons certaines variables :
-  str(data.full)
-  cols <- c("VehGas")
-  data.full[cols] <- lapply(data.full[cols], function(x) factor(x))
-  str(data.full)
+#  str(data.full)
+#  cols <- c("VehGas")
+#  data.full[cols] <- lapply(data.full[cols], function(x) factor(x))
+#  str(data.full)
 
-par(mfrow=c(2,2))
+#par(mfrow=c(2,2))
 
 # Fonction qui fabrique les plots expliquant les regrouppements de modalités choisis : prérequis : 
 makeplot <- function(data,var,title="Before",continuous=TRUE){
@@ -300,23 +404,23 @@ data.full %<>% Autorelevel
 ######################## Séparation des bases cout-moyen et des bases fréquences, nétoyage des bases.
 ################################################
 
-  .Clean <- . %>% drop_na %>% distinct
+#  .Clean <- . %>% drop_na %>% distinct
 
-  train.freq <- train.full %>%
-    select(-c(ClaimAmount)) %>%
-    .Clean
+#  train.full <- train.full %>%
+#    select(-c(ClaimAmount)) %>%
+#    .Clean
   
-  test.freq <- test.full %>% 
-    select(-c(ClaimAmount)) %>%
-    .Clean
-  
-  train.sev <- train.full %>%
-    select(-c(ClaimNb)) %>%
-    .Clean
-  
-  test.sev <- test.full %>% 
-    select(-c(ClaimNb)) %>%
-    .Clean 
+#  test.freq <- test.full %>% 
+#    select(-c(ClaimAmount)) %>%
+  #   .Clean
+  # 
+  # train.sev <- train.full %>%
+  #   select(-c(ClaimNb)) %>%
+  #   .Clean
+  # 
+  # test.sev <- test.full %>% 
+  #   select(-c(ClaimNb)) %>%
+  #   .Clean 
 
 ################################################
 ######################## Rassemblement des bases dans une seule variable Databases
@@ -325,22 +429,22 @@ data.full %<>% Autorelevel
   
   # L'idée : avoir tout au même endroit. 
   # On mettrat aussi les modèles dans ce dataset, ça permetra de pas se faire chier pour construire les predictions a la fin.
-  
-  
-  .MyList = list(data.freq,data.sev,data.full,train.freq,train.sev,train.full,test.freq,test.sev,test.full)
-  names(.MyList)=c("data.freq","data.sev","data.full","train.freq","train.sev","train.full","test.freq","test.sev","test.full")
-  Databases <-
-    tibble(Nom = names(.MyList)) %>%
-    mutate(
-      data = .MyList,
-      Type=map_chr(Nom,function(x) unlist(strsplit(x,"[.]"))[1]),
-      Modele=map_chr(Nom,function(x) unlist(strsplit(x,"[.]"))[2]),
-      Nom = "Original.dataset",
-      Selected=FALSE
-    ) %>%
-    select(Modele,Type,Nom,data,Selected) %>%
-    arrange(Modele,Type) %T>%
-    {print(.)}
+  # 
+  # 
+  # .MyList = list(data.freq,data.sev,data.full,train.full,train.sev,train.full,test.freq,test.sev,test.full)
+  # names(.MyList)=c("data.freq","data.sev","data.full","train.full","train.sev","train.full","test.freq","test.sev","test.full")
+  # Databases <-
+  #   tibble(Nom = names(.MyList)) %>%
+  #   mutate(
+  #     data = .MyList,
+  #     Type=map_chr(Nom,function(x) unlist(strsplit(x,"[.]"))[1]),
+  #     Modele=map_chr(Nom,function(x) unlist(strsplit(x,"[.]"))[2]),
+  #     Nom = "Original.dataset",
+  #     Selected=FALSE
+  #   ) %>%
+  #   select(Modele,Type,Nom,data,Selected) %>%
+  #   arrange(Modele,Type) %T>%
+  #   {print(.)}
 
 
 ```
@@ -367,10 +471,10 @@ La base etant assez volumineuse, nous choississons de conserver une proportion d
 
 Aprés analyse du dataset, nous avons discrétiser certains variables quatitatives via les classes de disccrétisation suivantes : 
 
-* Pour l'age du véhicule : `r names(table(train.freq$VehAge))`
-* Pour l'age du conducteur  : `r names(table(train.freq$DrivAge))`
-* Pour la puissance du véhicule : `r names(table(train.freq$VehPower))`
-* Pour le carburant : `r names(table(train.freq$VehGas))`
+* Pour l'age du véhicule : `r names(table(train.full$VehAge))`
+* Pour l'age du conducteur  : `r names(table(train.full$DrivAge))`
+* Pour la puissance du véhicule : `r names(table(train.full$VehPower))`
+* Pour le carburant : `r names(table(train.full$VehGas))`
 
 En effet, au vue des graphiques suivant donnant la densit?e de chaque Nombre de sinistre en fonction de ces variables, ces classifications nous ont parues logiques : 
 
@@ -411,12 +515,12 @@ Une sorte de GLM bootstrapé. Why not :)
 ######################## Setup de l'environnement
 ################################################
 
-# Récupération de la bonne base de donnée  de fréquence 
-train.freq <- 
-  Databases %>% 
-  filter(Modele=="freq",Type=="train") %>%
-  .$data %>%
-  `[[`(1)
+# # Récupération de la bonne base de donnée  de fréquence 
+# train.full <- 
+#   Databases %>% 
+#   filter(Modele=="freq",Type=="train") %>%
+#   .$data %>%
+#   `[[`(1)
 
 # On utilise ici une liste "mod.freq" qui contiendra tout les modèles qu'on va fabriquer sur la partie frequence.
 mod.freq <- list()
@@ -427,39 +531,39 @@ mod.freq <- list()
 
 # Attention, on met l'exposure en offset 
 
-#names(train.freq)
+#names(train.full)
 # IDpol + ClaimNb + Exposure + Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region
 
 # Passons a la BDD avec les regrouppements de modalité appliqué : Par déffaut on vire IDPOL
 
-mod.freq$poissonLog<- train.freq %>% 
+mod.freq$poissonLog<- train.full %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
 # on vire dirrectement la région : 
-mod.freq$poissonLog2<- train.freq %>% 
+mod.freq$poissonLog2<- train.full %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
 # ou alors plutot la puissance du véhicule : 
-mod.freq$poissonLog2b<- train.freq %>% 
+mod.freq$poissonLog2b<- train.full %>% 
   glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region  , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
 # ha c'est mieux. 
 # Et si on vire les deux : 
-mod.freq$poissonLog2c<- train.freq %>% 
+mod.freq$poissonLog2c<- train.full %>% 
   glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density, offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 # c'est encore mieux.
   
 # retirons density : 
-mod.freq$poissonLog3 <- train.freq %>% 
+mod.freq$poissonLog3 <- train.full %>% 
   glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehBrand + VehGas, offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
 # retirons la marque du véhicule : 
-mod.freq$poissonLog4 <- train.freq %>% 
+mod.freq$poissonLog4 <- train.full %>% 
   glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehGas, offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 #Ok c'est un tout petit peu mieux. Density explique probablement AreaF, ou en tout cas elles apporte la meme information.
@@ -469,7 +573,7 @@ mod.freq$poissonLog4 <- train.freq %>%
 ################################################
 ######################## Modèles poissoniens surdispersés
 ################################################
-mod.freq$odPoissonLog<- train.freq %>% 
+mod.freq$odPoissonLog<- train.full %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas , offset=log(Exposure), family=quasipoisson(link=log)) %T>%
   {print(summary(.))}
 
@@ -479,11 +583,11 @@ mod.freq$odPoissonLog<- train.freq %>%
 # on a es problèmes avecles Area, car les AreaB et AreaF sont moins représentées que les autres. 
 # il faudrais peut-être regroupper.
 #Bon OK meme en regrouppant ça fitte pas. Donc on les dégage.
-mod.freq$odPoissonLog2<- train.freq %>% 
+mod.freq$odPoissonLog2<- train.full %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehGas , offset=log(Exposure), family=quasipoisson(link=log)) %T>%
   {print(summary(.))}
 
-mod.freq$PoissonLog4<- train.freq %>% 
+mod.freq$PoissonLog4<- train.full %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehGas , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
@@ -493,7 +597,7 @@ mod.freq$PoissonLog4<- train.freq %>%
 ################################################
 
 # mod.freq$ZIPLog <-
-#   zeroinfl(data = train.freq, formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region, offset=log(Exposure), dist="poisson") %T>%
+#   zeroinfl(data = train.full, formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region, offset=log(Exposure), dist="poisson") %T>%
 #   {print(summary(.))}
 
 ################################################
@@ -501,14 +605,14 @@ mod.freq$PoissonLog4<- train.freq %>%
 ################################################
 # # Modèle complet : ( attention trèèèèès long a fitter)
 # mod.freq$ZIBNLog <-
-#   zeroinfl(data = train.freq, 
+#   zeroinfl(data = train.full, 
 #            formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region, offset=log(Exposure), dist="negbin") %T>%
 #            {print(summary(.))}
 # 
 # 
 # # On vire Area dans le modèle de zero-inflation et Region des deux cotés.
 # mod.freq$ZIBNLog2 <-
-#   zeroinfl(data = train.freq, 
+#   zeroinfl(data = train.full, 
 #            formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density | VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density, 
 #            offset=log(Exposure),
 #            dist="negbin") %T>%
@@ -516,7 +620,7 @@ mod.freq$PoissonLog4<- train.freq %>%
 # 
 # # On vire density
 # mod.freq$ZIBNLog3 <-
-#   zeroinfl(data = train.freq, 
+#   zeroinfl(data = train.full, 
 #            formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas  | VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas,
 #            offset=log(Exposure), dist="negbin") %T>%
 #            {print(summary(.))}
@@ -546,7 +650,7 @@ mod.freq$PoissonLog4<- train.freq %>%
       Databases %<>% full_join(dfMod)
       Databases[!grepl("Original",Databases$Nom),] %<>%
         mutate(data = Mod %>% map("data"))
-      Databases %<>% 
+      Databases %<>%
         {print(.)}
 
 ################################################
