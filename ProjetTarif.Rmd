@@ -229,151 +229,7 @@ abs(test_ind)>0.05
 ```
 
 
-```{r "Data management : Regroupepemnt de modalité, définition de l'individu de référence, creation du jeu d'apprentissage et du jeu de test & petites clarifications"}
-
-
-################################################
-######################## Preliminaires aux regrouppements de modalités
-################################################
-
- 
-# De plus, j'ai séparer dans deux chunks les regrouppements de modalitées et les fitting de modèles. Pas sur qu'il fallais faire comme ça. J'ai peut d'avoir trop regroupper car mes modèles fittent très bien. Ou alors c'est juste que la BDD est enorme. 
-
-# Commençons par réduire la taille de la data pour pouvoir travailler tranquilement si besoin. (pas obligatoire)
-
-# Re-factorisons certaines variables :
-#  str(data.full)
-#  cols <- c("VehGas")
-#  data.full[cols] <- lapply(data.full[cols], function(x) factor(x))
-#  str(data.full)
-
-#par(mfrow=c(2,2))
-
-# Fonction qui fabrique les plots expliquant les regrouppements de modalités choisis : prérequis : 
-makeplot <- function(data,var,title="Before",continuous=TRUE){
-  
-  p <- data %>% ggplot(aes(x = data[,var],weight = Exposure,fill=as.factor(ClaimNb)), environment = environment())
-  
-  if(continuous){p = p + geom_histogram()}
-  else          {p = p + geom_bar()}
-  
-  p = p + ggtitle(title) + labs(fill="Nombre de Sinitres",x=var,y="Exposition Totale")  
-  return(p)
-}
-
-
-################################################
-######################## Regrouppement de l'age du v?hicule
-################################################
-# Graphique de l'?tat du monde : 
-data.full %>% makeplot("VehAge") -> .VehAgeBefore
-  
-# Ok donc on peut clairement cr?er une classe 30+
-#df[df$VehAge<30,] %>% 
-#  qplot(data=.,VehAge,fill = as.factor(ClaimNb)) 
-#et des classes plus petites de 5 ann?es chacunes entre 0 et 20, puis 20-30.
-
-data.full$VehAge %<>% 
-  cut(., breaks = c(0, 5, 10, 15, 20, 30, max(.)), include.lowest = TRUE) %T>%
-  {print(summary(.))}
-
-# Graphique de l'?tat du monde Apr?s : 
-data.full %>% makeplot("VehAge",title = "After",continuous=FALSE) -> .VehAgeAfter 
-
-################################################
-######################## Regrouppement de l'Age du conducteur
-################################################
-# Graphique de l'?tat du monde : 
-data.full %>% makeplot("DrivAge") -> .DrivAgeBefore
-# Ok ce coup ci c'est moins flagrant. 
-# On va faire des classes d'age classqiue 18-25 puis 25-35,35-45, etc. jusqu'a 75+ ou 85+ en fonction du nombre de pelo
-
-#df[df$DrivAge > 75,] %>% 
-#  qplot(data=.,DrivAge,fill = as.factor(ClaimNb)) # Ok donc on prend 85+, mais peut-être qu'on les rassemblera plus-tard (pour des problème de manque de donn?es.)
-
-data.full$DrivAge %<>% 
-  cut(., breaks = c(18, seq(from = 25,to = 85,by = 10), max(.)), include.lowest = TRUE) %T>%
-  {print(summary(.))}
-
-# Graphique de l'?tat du monde Apr?s : 
-data.full %>% makeplot("DrivAge",title="After",continuous=FALSE) -> .DrivAgeAfter 
-################################################
-######################## Regrouppement de la puissance du v?hicule
-################################################
-data.full %>% makeplot("VehPower") -> .VehPowerBefore 
-
-data.full$VehPower %<>% 
-  cut(., breaks = c(4,5,6,7,8,11,15), include.lowest = TRUE,right=FALSE) %T>%
-  {print(summary(.))}
-
-data.full %>% makeplot("VehPower",title="After",continuous=FALSE) -> .VehPowerAfter
-
-################################################
-######################## Regrouppement d'Area
-################################################
-data.full %>% makeplot("Area",continuous=FALSE) -> .AreaBefore 
-
-data.full$Area %<>% 
-  fct_collapse("AB" = c("A","B"),
-               "EF" = c("E","F")) %T>%
-  {print(summary(.))}
-
-data.full %>% makeplot("Area",title="After",continuous=FALSE) -> .AreaAfter
-
-
-
-################################################
-######################## Regrouppement de la marque du véhicule 
-################################################
-# Commençons par les normaliser : 
-
-data.full$VehBrand %<>% 
-  as.character %>% 
-  gsub("B", "", .) %>%
-  {as.numeric(.)}
-
-table(data.full$VehBrand)
-
-# Puis réduisons le nombre de modalitées : Il semble en effet que les codes soit ordonnés.
-data.full %>% makeplot("VehBrand",continuous=FALSE) -> .VehBrandBefore
-
-# APrès un premier regrouppement 2 par 2 qui ne fittais pas sur la fréquence, on tente unregrouppement en 3 classes : 
-table(data.full$VehBrand)
-data.full$VehBrand %<>% 
-  cut(., breaks = c(1,3,7,11), include.lowest = TRUE,right=FALSE) %T>%
-  {print(summary(.))}
-
-
-data.full %>% makeplot("VehBrand",title="After",continuous=FALSE) -> .VehBrandAfter
-# Les variables créers VariableBefore et VariableAfter contienne des graphiques, que l'on plottera plus tard. 
-# Les modifications des variables ont été dirrectement appliquées à la base de données 'df', ces variables servent juste a l'affichage.
-  
-################################################
-######################## Création du profil de référence
-################################################
-# Le but va être de relevel automatique tout les factor du dataset sur la valeur la plus représentée : 
-
-# petite fonction : 
-Autorelevel <- function(dataset){
-  
-    # On commence par construire le profil de référence.
-    .ProfilDeRef <- 
-      dataset %>%
-      Filter(is.factor,.) %>%
-      map(table) %>%
-      map(sort,decreasing = TRUE) %>%
-      map(names) %>%
-      map_chr(1)
-    
-    # Puis pour chaque facteur, on relever sur le profil de référence.
-    for (i in names(Filter(is.factor,dataset))){
-      dataset[,i] <- relevel(dataset[,i],.ProfilDeRef[i])
-    }
-    
-    return(dataset)
-}
-
-data.full %<>% Autorelevel
+```{r "Data management :creation du jeu d'apprentissage et du jeu de test & petites clarifications"}
 
 ################################################
 ######################## Crétation d'une base de test et d'une base de train
@@ -511,6 +367,164 @@ Une sorte de GLM bootstrapé. Why not :)
 
 ```{r "Fitting du modèle de fréquence",include=FALSE}
 
+#on definit une base d'apprentissage et une de test pour la fréquence
+data.freq.train <- train.full
+data.freq.test <- test.full
+
+
+
+
+
+#######_____________     Cette partie du code est à reprendre, il faut faire suivre les regroupements de modalité sur la base de test
+
+
+
+################################################
+######################## Preliminaires aux regrouppements de modalités
+################################################
+
+ 
+# De plus, j'ai séparer dans deux chunks les regrouppements de modalitées et les fitting de modèles. Pas sur qu'il fallais faire comme ça. J'ai peut d'avoir trop regroupper car mes modèles fittent très bien. Ou alors c'est juste que la BDD est enorme. 
+
+# Commençons par réduire la taille de la data pour pouvoir travailler tranquilement si besoin. (pas obligatoire)
+
+# Re-factorisons certaines variables :
+#  str(data.freq.train)
+#  cols <- c("VehGas")
+#  data.freq.train[cols] <- lapply(data.freq.train[cols], function(x) factor(x))
+#  str(data.freq.train)
+
+#par(mfrow=c(2,2))
+
+# Fonction qui fabrique les plots expliquant les regrouppements de modalités choisis : prérequis : 
+makeplot <- function(data,var,title="Before",continuous=TRUE){
+  
+  p <- data %>% ggplot(aes(x = data[,var],weight = Exposure,fill=as.factor(ClaimNb)), environment = environment())
+  
+  if(continuous){p = p + geom_histogram()}
+  else          {p = p + geom_bar()}
+  
+  p = p + ggtitle(title) + labs(fill="Nombre de Sinitres",x=var,y="Exposition Totale")  
+  return(p)
+}
+
+
+################################################
+######################## Regrouppement de l'age du v?hicule
+################################################
+# Graphique de l'?tat du monde : 
+data.freq.train %>% makeplot("VehAge") -> .VehAgeBefore
+  
+# Ok donc on peut clairement cr?er une classe 30+
+#df[df$VehAge<30,] %>% 
+#  qplot(data=.,VehAge,fill = as.factor(ClaimNb)) 
+#et des classes plus petites de 5 ann?es chacunes entre 0 et 20, puis 20-30.
+
+data.freq.train$VehAge %<>% 
+  cut(., breaks = c(0, 5, 10, 15, 20, 30, max(.)), include.lowest = TRUE) %T>%
+  {print(summary(.))}
+
+# Graphique de l'?tat du monde Apr?s : 
+data.freq.train %>% makeplot("VehAge",title = "After",continuous=FALSE) -> .VehAgeAfter 
+
+################################################
+######################## Regrouppement de l'Age du conducteur
+################################################
+# Graphique de l'?tat du monde : 
+data.freq.train %>% makeplot("DrivAge") -> .DrivAgeBefore
+# Ok ce coup ci c'est moins flagrant. 
+# On va faire des classes d'age classqiue 18-25 puis 25-35,35-45, etc. jusqu'a 75+ ou 85+ en fonction du nombre de pelo
+
+#df[df$DrivAge > 75,] %>% 
+#  qplot(data=.,DrivAge,fill = as.factor(ClaimNb)) # Ok donc on prend 85+, mais peut-être qu'on les rassemblera plus-tard (pour des problème de manque de donn?es.)
+
+data.freq.train$DrivAge %<>% 
+  cut(., breaks = c(18, seq(from = 25,to = 85,by = 10), max(.)), include.lowest = TRUE) %T>%
+  {print(summary(.))}
+
+# Graphique de l'?tat du monde Apr?s : 
+data.freq.train %>% makeplot("DrivAge",title="After",continuous=FALSE) -> .DrivAgeAfter 
+################################################
+######################## Regrouppement de la puissance du v?hicule
+################################################
+data.freq.train %>% makeplot("VehPower") -> .VehPowerBefore 
+
+data.freq.train$VehPower %<>% 
+  cut(., breaks = c(4,5,6,7,8,11,15), include.lowest = TRUE,right=FALSE) %T>%
+  {print(summary(.))}
+
+data.freq.train %>% makeplot("VehPower",title="After",continuous=FALSE) -> .VehPowerAfter
+
+################################################
+######################## Regrouppement d'Area
+################################################
+data.freq.train %>% makeplot("Area",continuous=FALSE) -> .AreaBefore 
+
+data.freq.train$Area %<>% 
+  fct_collapse("AB" = c("A","B"),
+               "EF" = c("E","F")) %T>%
+  {print(summary(.))}
+
+data.freq.train %>% makeplot("Area",title="After",continuous=FALSE) -> .AreaAfter
+
+
+
+################################################
+######################## Regrouppement de la marque du véhicule 
+################################################
+# Commençons par les normaliser : 
+
+data.freq.train$VehBrand %<>% 
+  as.character %>% 
+  gsub("B", "", .) %>%
+  {as.numeric(.)}
+
+table(data.freq.train$VehBrand)
+
+# Puis réduisons le nombre de modalitées : Il semble en effet que les codes soit ordonnés.
+data.freq.train %>% makeplot("VehBrand",continuous=FALSE) -> .VehBrandBefore
+
+# APrès un premier regrouppement 2 par 2 qui ne fittais pas sur la fréquence, on tente unregrouppement en 3 classes : 
+table(data.freq.train$VehBrand)
+data.freq.train$VehBrand %<>% 
+  cut(., breaks = c(1,3,7,11), include.lowest = TRUE,right=FALSE) %T>%
+  {print(summary(.))}
+
+
+data.freq.train %>% makeplot("VehBrand",title="After",continuous=FALSE) -> .VehBrandAfter
+# Les variables créers VariableBefore et VariableAfter contienne des graphiques, que l'on plottera plus tard. 
+# Les modifications des variables ont été dirrectement appliquées à la base de données 'df', ces variables servent juste a l'affichage.
+  
+################################################
+######################## Création du profil de référence
+################################################
+# Le but va être de relevel automatique tout les factor du dataset sur la valeur la plus représentée : 
+
+# petite fonction : 
+Autorelevel <- function(dataset){
+  
+    # On commence par construire le profil de référence.
+    .ProfilDeRef <- 
+      dataset %>%
+      Filter(is.factor,.) %>%
+      map(table) %>%
+      map(sort,decreasing = TRUE) %>%
+      map(names) %>%
+      map_chr(1)
+    
+    # Puis pour chaque facteur, on relever sur le profil de référence.
+    for (i in names(Filter(is.factor,dataset))){
+      dataset[,i] <- relevel(dataset[,i],.ProfilDeRef[i])
+    }
+    
+    return(dataset)
+}
+
+data.freq.train %<>% Autorelevel
+
+
+#Reprendre le setup de l'environnement
+
 ################################################
 ######################## Setup de l'environnement
 ################################################
@@ -531,12 +545,12 @@ mod.freq <- list()
 
 # Attention, on met l'exposure en offset 
 
-#names(train.full)
+#names(data.freq.train)
 # IDpol + ClaimNb + Exposure + Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region
 
 # Passons a la BDD avec les regrouppements de modalité appliqué : Par déffaut on vire IDPOL
 
-mod.freq$poissonLog<- train.full %>% 
+mod.freq$poissonLog<- data.freq.train %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
@@ -681,22 +695,19 @@ Databases[Databases$Nom=="poissonLog",]$Selected = TRUE
 ################################################
 ######################## Setup de l'environnement
 ################################################
+# 
+# # Récupération de la bonne base de donnée  de fréquence 
+# train.sev <- 
+#   Databases %>% 
+#   filter(Modele=="sev",Type=="train") %>%
+#   .$data %>%
+#   `[[`(1) # la première entré de la base c'est les data brutes dans modèle.
+# 
+# # On utilise ici une liste "mod.sev" qui contiendra tout les modèles qu'on va fabriquer sur la partie frequence.
+# mod.sev <- list()
 
-# Récupération de la bonne base de donnée  de fréquence 
-train.sev <- 
-  Databases %>% 
-  filter(Modele=="sev",Type=="train") %>%
-  .$data %>%
-  `[[`(1) # la première entré de la base c'est les data brutes dans modèle.
-
-# On utilise ici une liste "mod.sev" qui contiendra tout les modèles qu'on va fabriquer sur la partie frequence.
-mod.sev <- list()
 
 
-
-#regroupement de modalité pour créer le modèle de coût
-
-#________Voici venu le temps de s'intéresser à la mise en forme et à l'analyse des données de cette base
 
 
 #On entraine un premier modèle random, histoire de pouvoir prédire par la suite
