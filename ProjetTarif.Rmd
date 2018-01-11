@@ -277,7 +277,7 @@ data.full %<>% Autorelevel
 
 # paramètre : 
   set.seed(seed=100)
-  .Proportion.Wanted = 0.8 # pour des question de rapiditée d'exection, j'ai déscendu la proportion a 0.01, il faut la remonter a 0.8 avent de rendre le code.
+  .Proportion.Wanted = 0.10 # pour des question de rapiditée d'exection, j'ai déscendu la proportion a 0.01, il faut la remonter a 0.8 avent de rendre le code.
 
 # application : 
 
@@ -492,12 +492,36 @@ mod.freq$PoissonLog4<- train.freq %>%
 ######################## Modèles ZIP
 ################################################
 
-mod.freq$ZeroInflPoissonLog <-
-  zeroinfl(data = train.freq, formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region, offset=log(Exposure), dist="poisson") %T>%
-  {print(summary(.))}
+# mod.freq$ZIPLog <-
+#   zeroinfl(data = train.freq, formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region, offset=log(Exposure), dist="poisson") %T>%
+#   {print(summary(.))}
 
+################################################
+######################## Modèles ZIBN
+################################################
+# # Modèle complet : ( attention trèèèèès long a fitter)
+# mod.freq$ZIBNLog <-
+#   zeroinfl(data = train.freq, 
+#            formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region, offset=log(Exposure), dist="negbin") %T>%
+#            {print(summary(.))}
+# 
+# 
+# # On vire Area dans le modèle de zero-inflation et Region des deux cotés.
+# mod.freq$ZIBNLog2 <-
+#   zeroinfl(data = train.freq, 
+#            formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density | VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density, 
+#            offset=log(Exposure),
+#            dist="negbin") %T>%
+#            {print(summary(.))}
+# 
+# # On vire density
+# mod.freq$ZIBNLog3 <-
+#   zeroinfl(data = train.freq, 
+#            formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas  | VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas,
+#            offset=log(Exposure), dist="negbin") %T>%
+#            {print(summary(.))}
 
-# Tout mes modèles ont pour l'instant un AIC supperieur au poisson stanard. 
+# Bon au final les zeroinfl c'est pas la joie, le poisson va très bien.
 
 ################################################
 ######################## Regrouppement des modèles fittés
