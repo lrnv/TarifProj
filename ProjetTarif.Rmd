@@ -406,7 +406,7 @@ data.full %<>% Autorelevel
 
 #  .Clean <- . %>% drop_na %>% distinct
 
-#  train.full <- train.full %>%
+#  train.freq <- train.full %>%
 #    select(-c(ClaimAmount)) %>%
 #    .Clean
   
@@ -516,7 +516,7 @@ Une sorte de GLM bootstrapé. Why not :)
 ################################################
 
 # # Récupération de la bonne base de donnée  de fréquence 
-# train.full <- 
+# train.freq <- 
 #   Databases %>% 
 #   filter(Modele=="freq",Type=="train") %>%
 #   .$data %>%
@@ -541,29 +541,29 @@ mod.freq$poissonLog<- train.full %>%
   {print(summary(.))}
 
 # on vire dirrectement la région : 
-mod.freq$poissonLog2<- train.full %>% 
+mod.freq$poissonLog2<- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
 # ou alors plutot la puissance du véhicule : 
-mod.freq$poissonLog2b<- train.full %>% 
+mod.freq$poissonLog2b<- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region  , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
 # ha c'est mieux. 
 # Et si on vire les deux : 
-mod.freq$poissonLog2c<- train.full %>% 
+mod.freq$poissonLog2c<- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density, offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 # c'est encore mieux.
   
 # retirons density : 
-mod.freq$poissonLog3 <- train.full %>% 
+mod.freq$poissonLog3 <- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehBrand + VehGas, offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
 # retirons la marque du véhicule : 
-mod.freq$poissonLog4 <- train.full %>% 
+mod.freq$poissonLog4 <- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehGas, offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 #Ok c'est un tout petit peu mieux. Density explique probablement AreaF, ou en tout cas elles apporte la meme information.
@@ -573,7 +573,7 @@ mod.freq$poissonLog4 <- train.full %>%
 ################################################
 ######################## Modèles poissoniens surdispersés
 ################################################
-mod.freq$odPoissonLog<- train.full %>% 
+mod.freq$odPoissonLog<- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas , offset=log(Exposure), family=quasipoisson(link=log)) %T>%
   {print(summary(.))}
 
@@ -583,11 +583,11 @@ mod.freq$odPoissonLog<- train.full %>%
 # on a es problèmes avecles Area, car les AreaB et AreaF sont moins représentées que les autres. 
 # il faudrais peut-être regroupper.
 #Bon OK meme en regrouppant ça fitte pas. Donc on les dégage.
-mod.freq$odPoissonLog2<- train.full %>% 
+mod.freq$odPoissonLog2<- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehGas , offset=log(Exposure), family=quasipoisson(link=log)) %T>%
   {print(summary(.))}
 
-mod.freq$PoissonLog4<- train.full %>% 
+mod.freq$PoissonLog4<- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehGas , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
@@ -597,7 +597,7 @@ mod.freq$PoissonLog4<- train.full %>%
 ################################################
 
 # mod.freq$ZIPLog <-
-#   zeroinfl(data = train.full, formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region, offset=log(Exposure), dist="poisson") %T>%
+#   zeroinfl(data = train.freq, formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region, offset=log(Exposure), dist="poisson") %T>%
 #   {print(summary(.))}
 
 ################################################
@@ -605,14 +605,14 @@ mod.freq$PoissonLog4<- train.full %>%
 ################################################
 # # Modèle complet : ( attention trèèèèès long a fitter)
 # mod.freq$ZIBNLog <-
-#   zeroinfl(data = train.full, 
+#   zeroinfl(data = train.freq, 
 #            formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region, offset=log(Exposure), dist="negbin") %T>%
 #            {print(summary(.))}
 # 
 # 
 # # On vire Area dans le modèle de zero-inflation et Region des deux cotés.
 # mod.freq$ZIBNLog2 <-
-#   zeroinfl(data = train.full, 
+#   zeroinfl(data = train.freq, 
 #            formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density | VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density, 
 #            offset=log(Exposure),
 #            dist="negbin") %T>%
@@ -620,7 +620,7 @@ mod.freq$PoissonLog4<- train.full %>%
 # 
 # # On vire density
 # mod.freq$ZIBNLog3 <-
-#   zeroinfl(data = train.full, 
+#   zeroinfl(data = train.freq, 
 #            formula = ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas  | VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas,
 #            offset=log(Exposure), dist="negbin") %T>%
 #            {print(summary(.))}
