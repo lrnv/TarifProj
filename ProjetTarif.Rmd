@@ -13,7 +13,7 @@ output:
 
 ### Instalation des packages n?c?ssaires : si vous avez besoin de CASdataset d?commentez la ligne : 
      #install.packages("CASdatasets", repos = "http://dutangc.free.fr/pub/RRepos/", type="source") # ligne sp?ciale pour CASdatasets qui ne vient pas de la meme source (pas de CRAN)
-    .list.of.packages <- c("CASdatasets","dplyr", "xts", "sp", "magrittr","ggplot2","gridExtra","gtable","grid","tidyr", "purrr","broom","pscl")
+    .list.of.packages <- c("CASdatasets","dplyr", "xts", "sp", "magrittr","ggplot2","gridExtra","gtable","grid","tidyr", "purrr","broom","pscl","forcats")
     .new.packages <- .list.of.packages[!(.list.of.packages %in% installed.packages()[,"Package"])]
     if(length(.new.packages)) install.packages(.new.packages)
     lapply(.list.of.packages,function(x){library(x,character.only=TRUE)}) 
@@ -204,6 +204,18 @@ data.full$VehPower %<>%
 
 data.full %>% makeplot("VehPower",title="After",continuous=FALSE) -> .VehPowerAfter
 
+################################################
+######################## Regrouppement d'Area
+################################################
+data.full %>% makeplot("Area",continuous=FALSE) -> .AreaBefore 
+
+data.full$Area %<>% 
+  fct_collapse("EF" = c("E","F")) %T>%
+  {print(summary(.))}
+
+data.full %>% makeplot("Area",title="After",continuous=FALSE) -> .AreaAfter
+
+
 
 ################################################
 ######################## Regrouppement de la marque du véhicule 
@@ -368,6 +380,7 @@ En effet, au vue des graphiques suivant donnant la densit?e de chaque Nombre de 
 # grid.arrange(.DrivAgeBefore, .DrivAgeAfter, nrow=2, ncol=1) # clairement, la non plus.
 # grid.arrange(.VehPowerBefore, .VehPowerAfter, nrow=2, ncol=1) # clairement, ça va pas non plus.
 # grid.arrange(.VehBrandBefore, .VehBrandAfter, nrow=2, ncol=1) # clairement, ça va pas.
+# grid.arrange(.AreaBefore, .AreaAfter, nrow=2, ncol=1) # clairement, ça va pas.
 ```
 
 
@@ -421,11 +434,22 @@ mod.freq$poissonLog<- train.freq %>%
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
+# on vire dirrectement la région : 
 mod.freq$poissonLog2<- train.freq %>% 
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
+# ou alors plutot la puissance du véhicule : 
+mod.freq$poissonLog2b<- train.freq %>% 
+  glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region  , offset=log(Exposure), family=poisson(link=log)) %T>%
+  {print(summary(.))}
 
+# ha c'est mieux. 
+# Et si on vire les deux : 
+mod.freq$poissonLog2c<- train.freq %>% 
+  glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density, offset=log(Exposure), family=poisson(link=log)) %T>%
+  {print(summary(.))}
+  
 #AreaF, AreaB et Density ne fittent pas bien. 
 # retirons density : 
 mod.freq$poissonLog3 <- train.freq %>% 
