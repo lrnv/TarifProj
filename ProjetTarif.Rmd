@@ -133,7 +133,7 @@ On a donc à notre disposition les variables suivantes :
 ################################################
 
 # paramètre : 
-  .Proportion.Wanted = 0.80
+  .Proportion.Wanted = 0.01 # pour des question de rapiditée d'exection, j'ai déscendu la proportion a 0.01, il faut la remonter a 0.8 avent de rendre le code.
 
 # application : 
 
@@ -360,10 +360,10 @@ En effet, au vue des graphiques suivant donnant la densit?e de chaque Nombre de 
 # Affichage des différents regroupements de modalité effectués.
 # lors de l'execution finale ou tout simplement pour voir ce qu'il c'est passer, décommenter les lignes suivantes : 
 
-grid.arrange(.VehAgeBefore, .VehAgeAfter, nrow=2, ncol=1) # clairement, toujours pas.
-grid.arrange(.DrivAgeBefore, .DrivAgeAfter, nrow=2, ncol=1) # clairement, la non plus.
-grid.arrange(.VehPowerBefore, .VehPowerAfter, nrow=2, ncol=1) # clairement, ça va pas non plus.
-grid.arrange(.VehBrandBefore, .VehBrandAfter, nrow=2, ncol=1) # clairement, ça va pas.
+# grid.arrange(.VehAgeBefore, .VehAgeAfter, nrow=2, ncol=1) # clairement, toujours pas.
+# grid.arrange(.DrivAgeBefore, .DrivAgeAfter, nrow=2, ncol=1) # clairement, la non plus.
+# grid.arrange(.VehPowerBefore, .VehPowerAfter, nrow=2, ncol=1) # clairement, ça va pas non plus.
+# grid.arrange(.VehBrandBefore, .VehBrandAfter, nrow=2, ncol=1) # clairement, ça va pas.
 ```
 
 
@@ -490,12 +490,7 @@ mod.freq$PoissonLog4<- train.freq %>%
 ################################################
 ######################## Regrouppement des modèles fittés
 ################################################
-
-# Comparons les résultats : 
-
-
 # ajout des modèles fittés a la base de donnée : 
-AddToDb <- function(.database,liste_des_modeles,.Modele,.Type){
   
       # on commence par construire des stats sur les modèles 
       # Cette partie est un peu longue.
@@ -509,22 +504,16 @@ AddToDb <- function(.database,liste_des_modeles,.Modele,.Type){
         glance = Mod %>% map(glance),
         tidy = Mod %>% map(tidy),
         augment = Mod %>% map(augment),
-        Modele=.Modele,
-        Type=.Type
+        Modele="freq",
+        Type="train"
       ) %T>% {print(.)}
     
       # on jointe les databases
-      .database %<>% full_join(dfMod)
-      .database[!grepl("Original",.database$Nom),] %<>%
+      Databases %<>% full_join(dfMod)
+      Databases[!grepl("Original",Databases$Nom),] %<>%
         mutate(data = Mod %>% map("data"))
-      # on revois le resultat
-      return(.database)
-}
-
-
-Databases %<>% 
-  AddToDb(mod.freq,"freq","train") %T>%
-  {print(.)}
+      Databases %<>% 
+        {print(.)}
 
 ################################################
 ######################## Selection d'un modèle 
@@ -547,18 +536,13 @@ Databases[Databases$Nom=="poissonLog",]$Selected = TRUE
 
 # Partie Couts moyens 
  
-```{r "Base sévérité : Préparation de notre jeux de données",include=FALSE}
+```{r "Base sévérité : Récupération des données",include=FALSE}
 
-#_________La première étape est de jointer les bases de données sur la IDPol
-
-# c'est partit : 
-#Joignons naivement nos données, nous garderons que celles qui présentent un claimamount (sinon elles ne servent à rien...)
-#On ne retient que les polices sinistrées
-#On exclue les ligne sans montant de sinistre
-
-train.sev <- dplyr::full_join(proper.train.freq,data.sev) %>%
-  subset(ClaimNb >0) %>%
-  subset(ClaimAmount >0)
+train.sev <- 
+  Databases %>% 
+  filter(Modele=="sev",Type=="train") %>%
+  .$data %>%
+  `[[`(1) # la première entré de la base c'est les data brutes dans modèle.
 
 cat("Nombre de ligne dans notre base :", nrow(train.sev), paste0("\n", "Nombre de numero d'identifiant différent dans notre base :"), length(unique(train.sev$IDpol)), "\n")
 
@@ -577,61 +561,48 @@ mod.sev$gammalog1 <- train.sev %>%
   glm (data = ., ClaimAmount ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehGas, family=Gamma(link=log)) %T>%
   {print(summary(.))}
 
-mod.sev$selected <- mod.sev$gammalog1
-
 cat("Modèle très qualitatif\n")
 cat("Modèle très nerveux\n")
 
-```
+################################################
+######################## Regrouppement des modèles fittés
+################################################
+# ajout des modèles fittés a la base de donnée : 
+      dfMod <- 
+      tibble(Nom = names(mod.sev)) %>%
+      mutate(
+        Mod2 = mod.sev,
+        Modele="sev",
+        Type="train"
+      ) %T>% {print(.)}
+    
+      # on jointe les databases
+      Databases %<>% full_join(dfMod)
+      Databases[which(Databases$Modele=="sev" & Databases$Nom!="Original.dataset"),] %<>%
+        mutate(Mod = map(Mod2,function(x) x)) %>%
+        mutate(data = Mod %>% map("data")) %>%
+        mutate(family = map(Mod,"family")) %>%
+        mutate(glance = Mod %>% map(function(x){if(is.null(x)){return(NULL)}else{return(glance(x))}})) %>%
+        mutate(tidy = Mod %>% map(function(x){if(is.null(x)){return(NULL)}else{return(tidy(x))}})) %>%
+        mutate(augment = Mod %>% map(function(x){if(is.null(x)){return(NULL)}else{return(augment(x))}}))
+       Databases %<>% select(-Mod2) %T>% {print(.)}
+
+################################################
+######################## Selection d'un modèle 
+################################################
+# AU vue de tout les modèles fittés, il faudrais définir un critère pour en choisir un. 
+# je pense qu'un bon critère serais de regarder leur AIC et BIC respectifs, voir d'autres statistiques (null.deviance) ou autre.
+# Si c'est le cas, on peut réflechir comme ça : 
+Databases[which(Databases$Modele=="sev" & Databases$Nom!="Original.dataset"),] %>%
+  select(-c(Modele,Type,data)) %>%
+  unnest(glance) %>%
+  arrange(AIC) # changer ici le critère de classement pour afficher les modèles dans un autre ordre.
+
+# une fois le modèle choisis, mettre TRUE dans sa colonne selected : 
+Databases[Databases$Nom=="gammalog1",]$Selected = TRUE
 
 
-```{r "Regroupement des modalités en vue d'un tarrif basé sur fréquence x coût"}
 
-#
-# On met en facteur les modalités de la base de test de fréquence
-#
-
-
-# il faudrais prévoir une fonction a la fin du fitting de fréquence qui comporte l'ensemble des regrouppements de données. 
-# ainsi on aura qu'a la lancer ici sur la base de tests.
-# la on duplique du code pour rien.
-# meme commentaire pour le modèle de cout.
-
-
-test.freq <- proper.test.freq
-
-cols <- c("VehGas")
-test.freq[cols] <- lapply(test.freq[cols], function(x) factor(x))
-
-test.freq$VehAge %<>% 
-  cut(., breaks = c(0, 5, 10, 15, 20, 30, max(.)), include.lowest = TRUE) %T>%
-  {print(summary(.))}
-
-test.freq$DrivAge %<>% 
-  cut(., breaks = c(18, seq(from = 25,to = 85,by = 10), max(.)), include.lowest = TRUE) %T>%
-  {print(summary(.))}
-
-test.freq$VehPower %<>% 
-  cut(., breaks = c(4,5,6,7,8,11,15), include.lowest = TRUE,right=FALSE) %T>%
-  {print(summary(.))}
-
-test.freq$VehBrand %<>% 
-  as.character %>% 
-  gsub("B", "", .) %>% 
-  {as.numeric(.)}
-
-test.freq$VehBrand %<>% 
-  cut(., breaks = c(1,3,7,11), include.lowest = TRUE,right=FALSE) %T>%
-  {print(summary(.))}
-
-#
-# On met en facteur les modalités de la base de test de cout
-#
-
-# Néant.
-# On garde tout ? On va avoir un problème pour merger ça avec la test.freq.
-test.sev <- dplyr::full_join(proper.test.freq,data.sev) %>%
-  subset(ClaimNb >0)
 
 ```
 
@@ -639,6 +610,17 @@ test.sev <- dplyr::full_join(proper.test.freq,data.sev) %>%
 ```{r "Prédictions"}
 
 #Seulement sur base des models selectionnés
+
+# commençons par récupérer les modèles : 
+selec.freq <- Databases %>% 
+  filter(Modele=="freq",Type=="train",Selected==TRUE) %>% .$Mod
+
+selec.sev <- Databases %>% 
+  filter(Modele=="sev",Type=="train",Selected==TRUE) %>% .$Mod
+
+# Ok il faurais maintenant récupérer sous forme de fonction les regrouppements de modélité effectué dans les modèles selectionés.
+# fais chiiiiiier j'ai passer la nuit dessut j'ai casiment pas avencer...
+
 
 
 prediction.test.freq <- predict.glm(object = mod.freq$selected, newdata = test.freq, type = "response")
