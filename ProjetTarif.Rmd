@@ -247,8 +247,8 @@ abs(test_ind)>0.05
   #Je fais une liste d'éléments pris au hazard dans les indices de notre BDD de fréquence
   .index_entrainement <- (1:nrow(data.full)) %>% sample(.,size = .Proportion.Wanted * nrow(data.full))
   
-  train.full <- data.full[.index_entrainement,]
-  test.full <- data.full[! seq(from = 1, to = nrow(data.full)) %in% .index_entrainement, ]
+  test.full <- data.full[.index_entrainement,]
+  train.full <- data.full[! seq(from = 1, to = nrow(data.full)) %in% .index_entrainement, ]
   
 # retour : 
   .Proportion.Achieved = round(100* nrow(train.full) / nrow(data.freq), 2)
