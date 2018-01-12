@@ -401,94 +401,67 @@ makeplot <- function(data,var,title="Before",continuous=TRUE){
 
 
 ################################################
-######################## Regrouppement de l'age du v?hicule
+######################## Graphiques de l'état de la bas de donnée.
 ################################################
-# Graphique de l'?tat du monde : 
-data$train.freq %>% makeplot("VehAge") -> .VehAgeBefore
-
-
-
-data$train.freq$VehAge %<>% 
-
-  cut(., breaks = c(0, 5, 10, 15, 20, 30, max(.)), include.lowest = TRUE) %T>%
-  {print(summary(.))}
-
-# Graphique de l'?tat du monde Apr?s : 
-data$train.freq %>% makeplot("VehAge",title = "After",continuous=FALSE) -> .VehAgeAfter 
-
-
-################################################
-######################## Regrouppement de l'Age du conducteur
-################################################
-# Graphique de l'?tat du monde : 
+data$train.freq %>% makeplot("VehAge",continuous=FALSE) -> .VehAgeBefore
 data$train.freq %>% makeplot("DrivAge") -> .DrivAgeBefore
+data$train.freq %>% makeplot("VehPower") -> .VehPowerBefore 
+data$train.freq %>% makeplot("Area",continuous=FALSE) -> .AreaBefore 
+data$train.freq %>% makeplot("VehBrand",continuous=FALSE) -> .VehBrandBefore
 
-# Ok ce coup ci c'est moins flagrant. 
-# On va faire des classes d'age classqiue 18-25 puis 25-35,35-45, etc. jusqu'a 75+ ou 85+ en fonction du nombre de pelo
+################################################
+######################## Regroupements de modalitées
+################################################
 
-#df[df$DrivAge > 75,] %>% 
-#  qplot(data=.,DrivAge,fill = as.factor(ClaimNb)) # Ok donc on prend 85+, mais peut-être qu'on les rassemblera plus-tard (pour des problème de manque de donn?es.)
-
-data$train.freq$DrivAge %<>% 
-  cut(., breaks = c(18, seq(from = 25,to = 85,by = 10), max(.)), include.lowest = TRUE) %T>%
+######################## Age du v?hicule
+RegVehAge <- . %>%
+  cut(., breaks = c(0, 3, 6, 9, 12, 15, 18, 21, 24, 27, 30, max(.)), include.lowest = TRUE) %T>%
   {print(summary(.))}
 
-# Graphique de l'?tat du monde Apr?s : 
-data$train.freq %>% makeplot("DrivAge",title="After",continuous=FALSE) -> .DrivAgeAfter 
-################################################
-######################## Regrouppement de la puissance du v?hicule
-################################################
-data$train.freq %>% makeplot("VehPower") -> .VehPowerBefore 
+data$train.freq$VehAge %<>% RegVehAge
 
-data$train.freq$VehPower %<>% 
+######################## Age du conducteur
+RegDrivAge <- . %>%
+  cut(., breaks = c(18, seq(from = 25,to = 85,by = 5), max(.)), include.lowest = TRUE) %T>%
+  {print(summary(.))}
+
+data$train.freq$DrivAge %<>% RegDrivAge
+
+######################## Puissance du v?hicule
+RegVehPower <- . %>%
   cut(., breaks = c(4,5,6,7,8,11,15), include.lowest = TRUE,right=FALSE) %T>%
   {print(summary(.))}
 
-data$train.freq %>% makeplot("VehPower",title="After",continuous=FALSE) -> .VehPowerAfter
 
+data$train.freq$VehPower %<>% RegVehPower
 
-################################################
-######################## Regrouppement d'Area
-################################################
-data$train.freq %>% makeplot("Area",continuous=FALSE) -> .AreaBefore 
-
-data$train.freq$Area %<>% 
-  fct_collapse("AB" = c("A","B"),
-               "EF" = c("E","F")) %T>%
+######################## Area
+RegArea <- . %>%
+  fct_collapse("ABF" = c("A","B","F"),
+               "CDE" = c("E","C","D")) %T>%
   {print(summary(.))}
 
+data$train.freq$Area %<>% RegArea
 
-data$train.freq %>% makeplot("Area",title="After",continuous=FALSE) -> .AreaAfter
+######################## Marque du véhicule 
+RegVehBrand <- . %>%
+  fct_collapse("B10-14" = c("B10","B11","B12","B13","B14"),
+               "B3-B6" = c("B3","B4","B5","B6")) %T>%
+  {print(summary(.))} 
 
-
+data$train.freq$VehBrand %<>% RegVehBrand
 
 
 ################################################
-######################## Regrouppement de la marque du véhicule 
+######################## Graphiques Après ces regrouppemens.
 ################################################
-# Commençons par les normaliser : 
-
-data$train.freq$VehBrand %<>% 
-  as.character %>% 
-  gsub("B", "", .) %>%
-  {as.numeric(.)}
-
-table(data$train.freq$VehBrand)
-
-# Puis réduisons le nombre de modalitées : Il semble en effet que les codes soit ordonnés.
-data$train.freq %>% makeplot("VehBrand",continuous=FALSE) -> .VehBrandBefore
-
-# APrès un premier regrouppement 2 par 2 qui ne fittais pas sur la fréquence, on tente unregrouppement en 3 classes : 
-table(data$train.freq$VehBrand)
-data$train.freq$VehBrand %<>% 
-  cut(., breaks = c(1,3,7,11), include.lowest = TRUE,right=FALSE) %T>%
-  {print(summary(.))}
-
 
 data$train.freq %>% makeplot("VehBrand",title="After",continuous=FALSE) -> .VehBrandAfter
-# Les variables créers VariableBefore et VariableAfter contienne des graphiques, que l'on plottera plus tard. 
-# Les modifications des variables ont été dirrectement appliquées à la base de données 'df', ces variables servent juste a l'affichage.
-  
+data$train.freq %>% makeplot("Area",title="After",continuous=FALSE) -> .AreaAfter
+data$train.freq %>% makeplot("VehPower",title="After",continuous=FALSE) -> .VehPowerAfter
+data$train.freq %>% makeplot("DrivAge",title="After",continuous=FALSE) -> .DrivAgeAfter 
+data$train.freq %>% makeplot("VehAge",title = "After",continuous=FALSE) -> .VehAgeAfter 
+
 ################################################
 ######################## Création du profil de référence
 ################################################
@@ -514,10 +487,9 @@ Autorelevel <- function(dataset){
     return(dataset)
 }
 
+
+# Et finalement on applique a notre dataset courrant : 
 data$train.freq %<>% Autorelevel
-
-
-#Reprendre le setup de l'environnement
 
 
 ```
@@ -525,25 +497,31 @@ data$train.freq %<>% Autorelevel
 
 
 
-Aprés analyse du dataset, nous avons discrétiser certains variables quatitatives via les classes de disccrétisation suivantes : 
+Aprés analyse du dataset, nous avons discrétiser certains variables quatitatives d'entrée de jeu pour la partie fréquence via les classes de disccrétisation suivantes : 
 
 * Pour l'age du véhicule : `r names(table(data$train.full$VehAge))`
 * Pour l'age du conducteur  : `r names(table(data$train.full$DrivAge))`
 * Pour la puissance du véhicule : `r names(table(data$train.full$VehPower))`
 * Pour le carburant : `r names(table(data$train.full$VehGas))`
+* Pour l'Area: `r names(table(data$train.full$Area))`
 
 En effet, au vue des graphiques suivant donnant la densit?e de chaque Nombre de sinistre en fonction de ces variables, ces classifications nous ont parues logiques : 
+
+
 
 ```{r fig.align="center", fig.width=10}
 # Affichage des différents regroupements de modalité effectués.
 # lors de l'execution finale ou tout simplement pour voir ce qu'il c'est passer, décommenter les lignes suivantes : 
 
-# grid.arrange(.VehAgeBefore, .VehAgeAfter, nrow=2, ncol=1) # clairement, toujours pas.
-# grid.arrange(.DrivAgeBefore, .DrivAgeAfter, nrow=2, ncol=1) # clairement, la non plus.
-# grid.arrange(.VehPowerBefore, .VehPowerAfter, nrow=2, ncol=1) # clairement, ça va pas non plus.
-# grid.arrange(.VehBrandBefore, .VehBrandAfter, nrow=2, ncol=1) # clairement, ça va pas.
-# grid.arrange(.AreaBefore, .AreaAfter, nrow=2, ncol=1) # clairement, ça va pas.
+grid.arrange(.VehAgeBefore, .VehAgeAfter, nrow=2, ncol=1) 
+grid.arrange(.DrivAgeBefore, .DrivAgeAfter, nrow=2, ncol=1) 
+grid.arrange(.VehPowerBefore, .VehPowerAfter, nrow=2, ncol=1) 
+grid.arrange(.VehBrandBefore, .VehBrandAfter, nrow=2, ncol=1) 
+grid.arrange(.AreaBefore, .AreaAfter, nrow=2, ncol=1) 
 ```
+
+Ces regrouppements de modalité ont été fait de prime abord, mais ils sont ammenés a changer lors du fitting des modèles. 
+
 
 ### Description de la technique de selection de modèle
 
@@ -580,14 +558,6 @@ Une sorte de GLM bootstrapé. Why not :)
 ######################## Setup de l'environnement
 ################################################
 
-# # Récupération de la bonne base de donnée  de fréquence 
-# data$train.freq <- 
-
-#   Databases %>% 
-#   filter(Modele=="freq",Type=="train") %>%
-#   .$data %>%
-#   `[[`(1)
-
 # On utilise ici une liste "mod.freq" qui contiendra tout les modèles qu'on va fabriquer sur la partie frequence.
 mod.freq <- list()
 
@@ -606,35 +576,63 @@ mod.freq$poissonLog<- data$train.freq %>%
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
-# on vire dirrectement la région : 
+# ont vraiment mal fitté : 
+# Drivage (80,85) -> on regrouppe avec (85,100)
+# VehAge (9,12) -> On regrouppe avec VehAge(12,15) -< COef plus proche.
+
+# Drivage d'abord : 
+RegDrivAge2 <- . %>%
+  fct_collapse("(80,100]" = c("(80,85]","(85,100]")) %T>%
+  {print(summary(.))}
+
+data$train.freq$DrivAge %<>% RegDrivAge2
+
 mod.freq$poissonLog2<- data$train.freq %>% 
+  glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region , offset=log(Exposure), family=poisson(link=log)) %T>%
+  {print(summary(.))}
+
+# VehAge now : 
+RegVehAge2 <- . %>%
+  fct_collapse("(3,9]" = c("(3,6]","(6,9]"),
+               "(15+]" = c("(15,18]","(18,21]","(21,24]","(24,27]","(27,30]","(30,100]")) %T>%
+  {print(summary(.))}
+
+data$train.freq$VehAge %<>% RegVehAge2
+
+mod.freq$poissonLog3<- data$train.freq %>% 
+  glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region , offset=log(Exposure), family=poisson(link=log)) %T>%
+  {print(summary(.))}
+
+
+# on vire dirrectement la région :
+mod.freq$poissonLog4<- data$train.freq %>%
   glm (data = ., ClaimNb ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
-# ou alors plutot la puissance du véhicule : 
-mod.freq$poissonLog2b<- data$train.freq %>% 
+# ou alors plutot la puissance du véhicule :
+mod.freq$poissonLog4b<- data$train.freq %>%
   glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density + Region  , offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
-# ha c'est mieux. 
-# Et si on vire les deux : 
-mod.freq$poissonLog2c<- data$train.freq %>% 
+# ha c'est mieux.
+# Et si on vire les deux :
+mod.freq$poissonLog4c<- data$train.freq %>%
   glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehBrand + VehGas + Density, offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 # c'est encore mieux.
-  
-# retirons density : 
-mod.freq$poissonLog3 <- data$train.freq %>% 
+
+# retirons density :
+mod.freq$poissonLog3 <- data$train.freq %>%
   glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehBrand + VehGas, offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 
-# retirons la marque du véhicule : 
-mod.freq$poissonLog4 <- data$train.freq %>% 
+# retirons la marque du véhicule :
+mod.freq$poissonLog4 <- data$train.freq %>%
   glm (data = ., ClaimNb ~ Area + VehAge + DrivAge + BonusMalus + VehGas, offset=log(Exposure), family=poisson(link=log)) %T>%
   {print(summary(.))}
 #Ok c'est un tout petit peu mieux. Density explique probablement AreaF, ou en tout cas elles apporte la meme information.
 
-# mais tout le reste est plutot bon. 
+# mais tout le reste est plutot bon.
 
 ################################################
 ######################## Modèles poissoniens surdispersés
@@ -693,48 +691,32 @@ mod.freq$PoissonLog4<- data$train.freq %>%
 
 # Bon au final les zeroinfl c'est pas la joie, le poisson va très bien.
 
-################################################
-######################## Regrouppement des modèles fittés
-################################################
-# ajout des modèles fittés a la base de donnée : 
-  
-      # on commence par construire des stats sur les modèles 
-      # Cette partie est un peu longue.
-      dfMod <- 
-      tibble(Nom = names(mod.freq)) %>%
-      mutate(
-        Mod = mod.freq,
-        family = map(Mod,"family"),
-        glance = Mod %>% map(glance),
-        tidy = Mod %>% map(tidy),
-        augment = Mod %>% map(augment),
-        Modele="freq",
-        Type="train"
-      ) %T>% {print(.)}
-    
-      # on jointe les databases
-      Databases %<>% full_join(dfMod)
-      Databases[!grepl("Original",Databases$Nom),] %<>%
-        mutate(data = Mod %>% map("data"))
-      Databases %<>%
-        {print(.)}
+
 
 ################################################
 ######################## Selection d'un modèle 
 ################################################
 
-# AU vue de tout les modèles fittés, il faudrais définir un critère pour en choisir un. 
-# je pense qu'un bon critère serais de regarder leur AIC et BIC respectifs, voir d'autres statistiques (null.deviance) ou autre.
-# Si c'est le cas, on peut réflechir comme ça : 
-Databases[!map_lgl(Databases$glance,is.null),] %>%
-  select(-c(Modele,Type,data)) %>%
-  unnest(glance) %>%
-  arrange(AIC) # changer ici le critère de classement pour afficher les modèles dans un autre ordre.
-
-# une fois le modèle choisis, mettre TRUE dans sa colonne selected : 
-Databases[Databases$Nom=="poissonLog",]$Selected = TRUE
+# Une fois le modèle choisis, le selectionner ici.
+mod.freq$Selected  <- mod.freq$PoissonLog
 
 
+################################################
+######################## Selection des regrouppements a effectués sur la base de test
+################################################
+# effectués sur la base de test les regrouppements fait sur la base de fréquence : 
+Reg.freq <- function(x){
+
+    x$DrivAge %<>% RegDrivAge  # %>% RegDrivAge2
+    x$VehAge %<>% RegVehAge  # %>% RegVehAge2
+    x$VehPower %<>% RegVehPower
+    x$VehBrand %<>% RegVehBrand
+    x$Area %<>% RegArea
+  
+    return(x)
+}
+
+data$test.freq %<>% Reg.freq
 
 ```
 
@@ -747,20 +729,14 @@ Databases[Databases$Nom=="poissonLog",]$Selected = TRUE
 ################################################
 ######################## Setup de l'environnement
 ################################################
-# 
-# # Récupération de la bonne base de donnée  de fréquence 
-# data$train.sev <- 
-#   Databases %>% 
-#   filter(Modele=="sev",Type=="train") %>%
-#   .$data %>%
-#   `[[`(1) # la première entré de la base c'est les data brutes dans modèle.
-# 
+
 # # On utilise ici une liste "mod.sev" qui contiendra tout les modèles qu'on va fabriquer sur la partie frequence.
-# mod.sev <- list()
+mod.sev <- list()
 
 
-
-
+################################################
+######################## Fitting des mdèles et regrouppement de modalitées : 
+################################################
 
 #On entraine un premier modèle random, histoire de pouvoir prédire par la suite
 mod.sev$gammalog1 <- data$train.sev %>% 
@@ -770,43 +746,14 @@ mod.sev$gammalog1 <- data$train.sev %>%
 cat("Modèle très qualitatif\n")
 cat("Modèle très nerveux\n")
 
-################################################
-######################## Regrouppement des modèles fittés
-################################################
-# ajout des modèles fittés a la base de donnée : 
-      dfMod <- 
-      tibble(Nom = names(mod.sev)) %>%
-      mutate(
-        Mod2 = mod.sev,
-        Modele="sev",
-        Type="train"
-      ) %T>% {print(.)}
-    
-      # on jointe les databases
-      Databases %<>% full_join(dfMod)
-      Databases[which(Databases$Modele=="sev" & Databases$Nom!="Original.dataset"),] %<>%
-        mutate(Mod = map(Mod2,function(x) x)) %>%
-        mutate(data = Mod %>% map("data")) %>%
-        mutate(family = map(Mod,"family")) %>%
-        mutate(glance = Mod %>% map(function(x){if(is.null(x)){return(NULL)}else{return(glance(x))}})) %>%
-        mutate(tidy = Mod %>% map(function(x){if(is.null(x)){return(NULL)}else{return(tidy(x))}})) %>%
-        mutate(augment = Mod %>% map(function(x){if(is.null(x)){return(NULL)}else{return(augment(x))}}))
-       Databases %<>% select(-Mod2) %T>% {print(.)}
 
 ################################################
 ######################## Selection d'un modèle 
 ################################################
-# AU vue de tout les modèles fittés, il faudrais définir un critère pour en choisir un. 
-# je pense qu'un bon critère serais de regarder leur AIC et BIC respectifs, voir d'autres statistiques (null.deviance) ou autre.
-# Si c'est le cas, on peut réflechir comme ça : 
-Databases[which(Databases$Modele=="sev" & Databases$Nom!="Original.dataset"),] %>%
-  select(-c(Modele,Type,data)) %>%
-  unnest(glance) %>%
-  arrange(AIC) # changer ici le critère de classement pour afficher les modèles dans un autre ordre.
 
-# une fois le modèle choisis, mettre TRUE dans sa colonne selected : 
-Databases[Databases$Nom=="gammalog1",]$Selected = TRUE
 
+# Une fois le modèle choisis, le selectionner ici.
+mod.sev$Selected  <- mod.sev$gammalog1
 
 
 
@@ -817,20 +764,15 @@ Databases[Databases$Nom=="gammalog1",]$Selected = TRUE
 
 #Seulement sur base des models selectionnés
 
-# commençons par récupérer les modèles : 
-selec.freq <- Databases %>% filter(Modele=="freq",Type=="train",Selected==TRUE) %>% .$Mod
-selec.sev <- Databases %>% filter(Modele=="sev",Type=="train",Selected==TRUE) %>% .$Mod
 
-# puis les data : 
-data$test.freq <- Databases %>% filter(Nom=="Original.dataset",Type=="test",Modele=="freq") %>% .$data
-data$test.sev <- Databases %>% filter(Nom=="Original.dataset",Type=="test",Modele=="sev") %>% .$data
-
-prediction.data$test.freq <- predict.glm(object = selec.freq, newdata = data$test.freq, type = "response")
-length(prediction.data$test.freq)
+prediction.data$test.freq <- predict.glm(object = mod.freq$Selected, 
+                                         newdata = data$test.freq,
+                                         type = "response") %T>% {print(length(.))}
 
 
-prediction.data$test.sev <- predict.glm(object = selec.sev, newdata = data$test.sev, type = "response")
-length(prediction.data$test.sev)
+prediction.data$test.sev <- predict.glm(object = mod.sev$Selected,
+                                        newdata = data$test.sev,
+                                        type = "response") %T>% {print(length(.))}
 
 #Construisons la table prédiction VS réalité pour la fréquence :
 
