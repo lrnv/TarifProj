@@ -87,6 +87,7 @@ Voici les grandes étapes attendues à titre indicatif, mais vous pouvez bien s�
 
 ### Récupération des données.
 
+
 Les bases SINISTRE et CONTRAT à étudier sont contenues dans la librairie **CASdatasets** de R. Les données à importer s'intitulent **freMTPL2freq** et **freMTPL2sev**.
 
 ```{r Récupération des données,output=FALSE}
@@ -117,8 +118,7 @@ On a donc à notre disposition les variables suivantes :
 * Dans la base contrat : 
     * IDpol : Identifiant police
     * ClaimAmout : Cout total du sinistre, vu a une date récente ( à l'ultime).
-    
-    
+
 
     
     
@@ -183,7 +183,7 @@ Lors de la jonction des deux bases, nous en avons profitter pour gérer la s'apr
                      .sin.mean, 
                      by="IDpol", 
                      all.x=TRUE)
-  
+
 
 
 #Les polices non sinistrées présentent logiquement la valeur NA comme montant moyen et cumulé de sinistres.
@@ -205,10 +205,10 @@ Lors de la jonction des deux bases, nous en avons profitter pour gérer la s'apr
   data$full$ClaimNb <- data$full$AttClaimNb
   data$full$AttClaimNb <- NULL
 
+
 ################################################
 ######################## Typage des données
 ################################################
-
   str(data$full)
   data$full$ClaimNb <- as.numeric(data$full$ClaimNb) #le nombre de sinistres doit naturellement être de type numérique
   data$full$IDpol <- as.factor(data$full$IDpol) #l'identifiant de la police doit être une variable catégorielle
@@ -259,6 +259,7 @@ Nous avons commencer par analyser les corrélations entre les différentes varia
 
 [[Commentaire à completer]]
 
+
 ```{r "Analyse des données"}
 
 ################################################
@@ -284,6 +285,7 @@ diag(cor_matrix_test) <- 0
 corrplot(cor_matrix_test)
 
 #Il est intéressant de remarquer que le BonusMalus est negativement corrélé à l'âge du conducteur. Surrement un effet Bonus a vie, ou plus simplement le fait que les jeunes conduisent mal et démarrent avec un bonnus a 100, qui a ensuite tendence a baisser.
+
 #Les variables Cum_ClaimAmount et Mean_ClaimAmount sont logiquement très corrélées
 
 ###____ Entre variables qualitatives -> test du khi2
@@ -304,13 +306,13 @@ abs(chi2_test_ind)>0.05
 #elles sont toutes indépendantes, ce qui est bien.
 
 
+
 ###___ Analyse en composante principale
 
 #A faire
 
 
 ```
-
 
 
 ### Section Apprentissage / test de la base 
@@ -340,9 +342,6 @@ abs(chi2_test_ind)>0.05
 # retour : 
   Proportion.Train.Achieved <- round(100* nrow(data$train.full) / nrow(data$freq), 2) %T>% print
   
-################################################
-######################## Crétation d'une fonction d'autorelevel 
-################################################
 
 ```
 
@@ -359,6 +358,8 @@ La base etant assez volumineuse, nous choississons de conserver une proportion d
 
 
 
+
+
 ## Partie fréquence 
 
 ### Typage des champs et regrouppements préliminaires
@@ -369,12 +370,6 @@ Une des premières choses a faire fut de discrétiser certaines variables contin
 # On récupère la base globale pour la fréquence, avec une partie apprentissage et une partie test.
 data$train.freq <- data$train.full
 data$test.freq <- data$test.full
-
-
-
-
-
-
 
 
 #######_____________     Cette partie du code est à reprendre, il faut faire suivre les regroupements de modalité sur la base de test
@@ -390,10 +385,6 @@ data$test.freq <- data$test.full
 # De mème, on peut faire parreil sur la base de cout. 
 
 RegroupFunc.freq <- list()
-
-
-
-
 
 
 # Fonction qui fabrique les plots expliquant les regrouppements de modalités choisis : prérequis : 
@@ -414,27 +405,24 @@ makeplot <- function(data,var,title="Before",continuous=TRUE){
 ################################################
 # Graphique de l'?tat du monde : 
 data$train.freq %>% makeplot("VehAge") -> .VehAgeBefore
-  
-# Ok donc on peut clairement cr?er une classe 30+
-#df[df$VehAge<30,] %>% 
-#  qplot(data=.,VehAge,fill = as.factor(ClaimNb)) 
-#et des classes plus petites de 5 ann?es chacunes entre 0 et 20, puis 20-30.
-
 
 
 
 data$train.freq$VehAge %<>% 
+
   cut(., breaks = c(0, 5, 10, 15, 20, 30, max(.)), include.lowest = TRUE) %T>%
   {print(summary(.))}
 
 # Graphique de l'?tat du monde Apr?s : 
 data$train.freq %>% makeplot("VehAge",title = "After",continuous=FALSE) -> .VehAgeAfter 
 
+
 ################################################
 ######################## Regrouppement de l'Age du conducteur
 ################################################
 # Graphique de l'?tat du monde : 
 data$train.freq %>% makeplot("DrivAge") -> .DrivAgeBefore
+
 # Ok ce coup ci c'est moins flagrant. 
 # On va faire des classes d'age classqiue 18-25 puis 25-35,35-45, etc. jusqu'a 75+ ou 85+ en fonction du nombre de pelo
 
@@ -458,6 +446,7 @@ data$train.freq$VehPower %<>%
 
 data$train.freq %>% makeplot("VehPower",title="After",continuous=FALSE) -> .VehPowerAfter
 
+
 ################################################
 ######################## Regrouppement d'Area
 ################################################
@@ -468,7 +457,9 @@ data$train.freq$Area %<>%
                "EF" = c("E","F")) %T>%
   {print(summary(.))}
 
+
 data$train.freq %>% makeplot("Area",title="After",continuous=FALSE) -> .AreaAfter
+
 
 
 
@@ -528,6 +519,7 @@ data$train.freq %<>% Autorelevel
 
 #Reprendre le setup de l'environnement
 
+
 ```
 
 
@@ -584,14 +576,13 @@ Une sorte de GLM bootstrapé. Why not :)
 ```{r "Fitting du modèle de fréquence des attritionels",include=FALSE}
 
 
-
-
 ################################################
 ######################## Setup de l'environnement
 ################################################
 
 # # Récupération de la bonne base de donnée  de fréquence 
 # data$train.freq <- 
+
 #   Databases %>% 
 #   filter(Modele=="freq",Type=="train") %>%
 #   .$data %>%
