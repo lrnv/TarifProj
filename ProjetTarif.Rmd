@@ -12,7 +12,7 @@ output:
     knitr::opts_chunk$set(echo = FALSE,warning = FALSE)
 
 ### Instalation des packages n?c?ssaires : si vous avez besoin de CASdataset d?commentez la ligne : 
-     #install.packages("CASdatasets", repos = "http://dutangc.free.fr/pub/RRepos/", type="source") # ligne sp?ciale pour CASdatasets qui ne vient pas de la meme source (pas de CRAN)
+     install.packages("CASdatasets", repos = "http://dutangc.free.fr/pub/RRepos/", type="source") # ligne sp?ciale pour CASdatasets qui ne vient pas de la meme source (pas de CRAN)
     .list.of.packages <- c("CASdatasets","dplyr", "xts", "sp", "magrittr","ggplot2","gridExtra","gtable","grid","tidyr", "purrr","broom","pscl","forcats")
     .new.packages <- .list.of.packages[!(.list.of.packages %in% installed.packages()[,"Package"])]
     if(length(.new.packages)) install.packages(.new.packages)
@@ -128,52 +128,86 @@ On a donc à notre disposition les variables suivantes :
   data.freq <- freMTPL2freq
   data.sev <- freMTPL2sev
 #  data.full <- full_join(data.freq,data.sev)
+  
+  library(fExtremes)
+  
+#on identifie directement les sinstres attritionnels des sinistres graves.
+  mePlot(data.sev$ClaimAmount)
+#Sur le mean excess plot, on d�tecte une rupture pour environ un montant de 200 000??? de sinistre
+#Nous retenons cette valeur comme seuil de s�paration des sinistres attritionnels des graves.
+  seuil.separation <- 200000
+
+#les sinistres graves repr�sentent 0.07% de la base de sinistres
+  nrow(data.sev[which(data.sev$ClaimAmount>seuil.separation),])/nrow(data.sev)*100
+
+  
+#petit passage interm�diaire pour ajouter une colonne � la base qui permettra de compter le nombre de sinistres au moment de la jointure des bases de donn�es
+  data.sev.att <- data.frame(data.sev[which(data.sev$ClaimAmount<=seuil.separation),],rep(1,nrow(data.sev[which(data.sev$ClaimAmount<=seuil.separation),])))
+  names(data.sev.att) <- c("IDpol","ClaimAmount","AttClaimNb")
+
+
+  data.sev.grv <- data.frame(data.sev[which(data.sev$ClaimAmount>seuil.separation),],rep(1,nrow(data.sev[which(data.sev$ClaimAmount>seuil.separation),])))
+  names(data.sev.grv) <- c("IDpol","ClaimAmount","GrvClaimNb")
+
+
+#on agr�ge les sinistres graves, uniquement dans le but d'enrichir la base de donnees generale, ce ne sera pas utilise par la suite
+  sin.grv.nbcum <- aggregate(cbind(GrvClaimNb,ClaimAmount) ~ IDpol, data = data.sev.grv, sum)
+
 
 #Suivant la modélisation retenue (glm brutal ou décomposition fréquence-coût moyen), nous aurons besoins d'utiliser les sinistres cumulés ou la moyenne des sinistres pour chaque police
-sin.cum <- aggregate(ClaimAmount ~ IDpol, data = data.sev, sum)
-names(sin.cum) <- c("IDpol", "Cum_ClaimAmount")
-sin.mean <- aggregate(ClaimAmount ~ IDpol, data = data.sev, mean)
-names(sin.mean) <- c("IDpol", "Mean_ClaimAmount")
+  sin.cum <- aggregate(cbind(AttClaimNb,ClaimAmount) ~ IDpol, data = data.sev.att, sum)
+  names(sin.cum) <- c("IDpol","AttClaimNb", "Cum_ClaimAmount")
+  sin.mean <- aggregate(ClaimAmount ~ IDpol, data = data.sev.att, mean)
+  names(sin.mean) <- c("IDpol", "Mean_ClaimAmount")
+  
 
-#Il ne sous reste plus qu'à joindre la base de frequence avec les 2 autres bases de données
+#Il ne sous reste plus qu'à joindre la base de frequence avec les 3 autres bases de données
+  data.full <- merge(merge(merge(data.freq, sin.grv.nbcum, by="IDpol", all.x=TRUE), sin.cum, by="IDpol", all.x=TRUE), sin.mean, by="IDpol", all.x=TRUE)
+  
 
-data.full <- merge(merge(data.freq, sin.cum, by="IDpol", all.x=TRUE), sin.mean, by="IDpol", all.x=TRUE)
 
 #Les polices non sinistrées présentent logiquement la valeur NA comme montant moyen et cumulé de sinistres.
 #Il nous faut les remplacer par 0.
-data.full$Cum_ClaimAmount <- replace(data.full$Cum_ClaimAmount, is.na(data.full$Cum_ClaimAmount), 0)
-data.full$Mean_ClaimAmount <- replace(data.full$Mean_ClaimAmount, is.na(data.full$Mean_ClaimAmount), 0)
+  data.full$Cum_ClaimAmount <- replace(data.full$Cum_ClaimAmount, is.na(data.full$Cum_ClaimAmount), 0)
+  data.full$Mean_ClaimAmount <- replace(data.full$Mean_ClaimAmount, is.na(data.full$Mean_ClaimAmount), 0)
+  data.full$AttClaimNb <- replace(data.full$AttClaimNb, is.na(data.full$AttClaimNb), 0)
+  data.full$GrvClaimNb <- replace(data.full$GrvClaimNb, is.na(data.full$GrvClaimNb), 0)
 
+#Pour autant, des polices sinistrées demeurent avec des montants moyens et cumulé de sinistres attritionnel et un nombre de sinistres graves  nuls.
+#Nous estimons que ce sont des erreurs dans la base de données. Dans les 2 cas, il nous faut retirer ces lignes de la base.
+#Cette ligne de code permet egalement de nettoyer la base des polices dont le nombre de sinistres total est diff�rent de la somme du nombr de sinistres attritionnels et du nombre de sinistres graves
+  data.full <- data.full[-which(data.full$ClaimNb !=0 &data.full$ClaimNb != data.full$GrvClaimNb + data.full$AttClaimNb & data.full$Cum_ClaimAmount==0),]
+  
 
-#Pour autant, des polices sinistrées demeurent avec des montants moyen et cumulé de sinistres nuls
-#Nous estimons que ce sont des erreurs dans la base de données et supprimons donc les lignes concernées
-data.full <- data.full[-which(data.full$ClaimNb !=0 & data.full$Cum_ClaimAmount==0),]
-
-
-
+#Pour que la base de donn�es soit plus simple � utiliser, nous ne conservons pas le nombre de sinistres total,  mais simplement le nombre de sinstres attritonnel
+  data.full$ClaimNb <- data.full$AttClaimNb
+  data.full$AttClaimNb <- NULL
 
 ################################################
 ######################## Typage des données
 ################################################
 
-sapply(data.full,class)
-data.full$ClaimNb <- as.numeric(data.full$ClaimNb) #le nombre de sinistres doit naturellement être de type numérique
-data.full$IDpol <- as.factor(data.full$IDpol) #l'identifiant de la police doit être une variable catégorielle
-data.full$VehPower <- as.numeric(data.full$VehPower) #de même pour la puissance du véhicule
-data.full$VehAge <- as.numeric(data.full$VehAge) #l'âge est toujour numérique
-data.full$DrivAge <- as.numeric(data.full$DrivAge) #idem
-data.full$BonusMalus <- as.numeric(data.full$BonusMalus) #le Bonus Malus est un coefficient qui s'applique à la prime, donc est numérique
-data.full$VehGas <- as.factor(data.full$VehGas) #le carburant de du véhicule est une variable catégorielle
-data.full$Density <- as.numeric(data.full$Density) #la densité est de type numérique
-
-sapply(data.full,class)
+  sapply(data.full,class)
+  data.full$ClaimNb <- as.numeric(data.full$ClaimNb) #le nombre de sinistres doit naturellement être de type numérique
+  data.full$IDpol <- as.factor(data.full$IDpol) #l'identifiant de la police doit être une variable catégorielle
+  data.full$VehPower <- as.numeric(data.full$VehPower) #de même pour la puissance du véhicule
+  data.full$VehAge <- as.numeric(data.full$VehAge) #l'âge est toujour numérique
+  data.full$DrivAge <- as.numeric(data.full$DrivAge) #idem
+  data.full$BonusMalus <- as.numeric(data.full$BonusMalus) #le Bonus Malus est un coefficient qui s'applique à la prime, donc est numérique
+  data.full$VehGas <- as.factor(data.full$VehGas) #le carburant de du véhicule est une variable catégorielle
+  data.full$Density <- as.numeric(data.full$Density) #la densité est de type numérique
+  
+  sapply(data.full,class)
 
 ```
 
+```{r "Sinistres graves"}
+#On peut d'abord determiner la surprime associee a ces sinitres graves qui sera ajoutee aux resultats du modele developpe pour les sinistres attritionnels
+#Cette surprime correspond a la moyenne des sinistres graves sur l'ensemble des assur�s
 
+  surprime.sinGrv <- sum(data.sev.grv$ClaimAmount)/sum(data.full$Exposure)
 
-
-
+```
 
 ```{r "Analyse des données"}
 
