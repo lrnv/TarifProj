@@ -724,7 +724,10 @@ data$test.freq %<>% Reg.freq
 
 
 ```{r "Création d'un modèle de cout moyen", output = FALSE}
+############# Tout comme le modèle de fréquence, on pourrais se permetre de faire des regrouppements de modalitées préalable. 
+# Sauf que l'analyse ne serais pas la meme que sur celle des fréquences. 
 
+# je vous laisse maitre de comment vous voulez faire ça. 
 
 ################################################
 ######################## Setup de l'environnement
@@ -756,6 +759,13 @@ cat("Modèle très nerveux\n")
 # Une fois le modèle choisis, le selectionner ici.
 mod.sev$Selected  <- mod.sev$gammalog1
 
+################################################
+######################## Regrouppements de modalitées dans la base de test
+################################################
+
+# A faire !!!! 
+# il faut que les modalitées soient regroupées pareil dans data$test.sev
+# que dans la base de donnée sur laquelle vous avez fittez votre modèle. 
 
 
 ```
