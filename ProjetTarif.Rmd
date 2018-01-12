@@ -729,7 +729,8 @@ data$test.freq %<>% Reg.freq
 ################################################
 ######################## Setup de l'environnement
 ################################################
-
+data$train.sev <- data$train.full
+data$test.sev <- data$test.full
 # # On utilise ici une liste "mod.sev" qui contiendra tout les modèles qu'on va fabriquer sur la partie frequence.
 mod.sev <- list()
 
@@ -740,7 +741,7 @@ mod.sev <- list()
 
 #On entraine un premier modèle random, histoire de pouvoir prédire par la suite
 mod.sev$gammalog1 <- data$train.sev %>% 
-  glm (data = ., ClaimAmount ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehGas, family=Gamma(link=log)) %T>%
+  glm (data = ., AttClaimAmount ~ Area + VehPower + VehAge + DrivAge + BonusMalus + VehGas, family=Gamma(link=log)) %T>%
   {print(summary(.))}
 
 cat("Modèle très qualitatif\n")
